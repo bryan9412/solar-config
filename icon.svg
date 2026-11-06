@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16303d"/><stop offset="1" stop-color="#0a161d"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><g transform="translate(26 6)">  <g stroke="#f0a63a" stroke-width="18" stroke-linecap="round">
+    <line x1="160" y1="62" x2="160" y2="92"/>
+    <line x1="160" y1="268" x2="160" y2="298"/>
+    <line x1="42" y1="180" x2="72" y2="180"/>
+    <line x1="77" y1="97" x2="98" y2="118"/>
+    <line x1="77" y1="263" x2="98" y2="242"/>
+    <line x1="243" y1="97" x2="222" y2="118"/>
+  </g>
+  <circle cx="160" cy="180" r="62" fill="#f0a63a"/>
+  <rect x="246" y="118" width="76" height="40" rx="12" fill="#a8e6f0"/>
+  <rect x="200" y="150" width="168" height="282" rx="34" fill="#0f1e27" stroke="#a8e6f0" stroke-width="20"/>
+  <rect x="226" y="352" width="116" height="52" rx="10" fill="#4fae79"/>
+  <rect x="226" y="290" width="116" height="52" rx="10" fill="#4fae79" opacity=".55"/>
+  <polygon points="300,176 232,300 278,300 262,396 338,262 290,262 318,176" fill="#f0a63a" stroke="#0f1e27" stroke-width="10" stroke-linejoin="round"/>
+</g></svg>

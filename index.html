@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Configuración solar</title>
+<meta name="theme-color" content="#0f1e27">
+<meta name="description" content="Configuración de inversores Sumry y ExpertPower con baterías LiFePO4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Solar">
+<script>
+window.onerror = function(msg, src, line){
+  var w = document.getElementById('jsWarn');
+  if(w){ w.hidden = false; w.textContent = 'Error de JavaScript: ' + msg + ' (línea ' + line + '). Si copiaste el código, revisa que el archivo termine en </html>.'; }
+};
+(function(){ try{ var t = localStorage.getItem('sumry_theme'); if(t==='light'||t==='dark') document.documentElement.setAttribute('data-theme', t); }catch(e){} })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#e9eef2; --surface:#ffffff; --surface-2:#f3f6f8; --line:#d3dce3; --line-strong:#b9c6d0;
+  --text:#13202a; --muted:#5a6a77;
+  --accent:#c97c0a; --accent-soft:rgba(201,124,10,.12); --accent-ink:#ffffff;
+  --ok:#2c8a57; --warn:#c06a1f; --danger:#c23f2c; --info:#2a7c93;
+  --z-crit:#c94a37; --z-danger:#de8a3e; --z-reserve:#e9b84a; --z-normal:#4fae79; --z-full:#3f8fb5;
+  --lcd-bg:#0f1e27; --lcd-line:#1f3a48; --lcd-text:#a8e6f0; --lcd-dim:#5f8a97;
+  --f-body:"Barlow", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --f-tech:"Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0c141a; --surface:#131e26; --surface-2:#18252f; --line:#233442; --line-strong:#2f4556;
+    --text:#e4ebf0; --muted:#8c9eab;
+    --accent:#f0a63a; --accent-soft:rgba(240,166,58,.14); --accent-ink:#1d1300;
+    --ok:#5cbd87; --warn:#ea9450; --danger:#ec6b56; --info:#5db6ca;
+    --lcd-bg:#08131a; --lcd-line:#1a3240;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0c141a; --surface:#131e26; --surface-2:#18252f; --line:#233442; --line-strong:#2f4556;
+  --text:#e4ebf0; --muted:#8c9eab;
+  --accent:#f0a63a; --accent-soft:rgba(240,166,58,.14); --accent-ink:#1d1300;
+  --ok:#5cbd87; --warn:#ea9450; --danger:#ec6b56; --info:#5db6ca;
+  --lcd-bg:#08131a; --lcd-line:#1a3240;
+}
+html{scroll-padding-top:env(safe-area-inset-top, 0px);}
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0; background:var(--bg); color:var(--text); font-family:var(--f-body); font-size:15px; line-height:1.45;
+  -webkit-text-size-adjust:100%; font-variant-numeric:tabular-nums;}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:20; background:var(--surface);}
+button{font:inherit; color:inherit;}
+button:focus-visible, input:focus-visible, select:focus-visible, [role="checkbox"]:focus-visible{outline:2px solid var(--info); outline-offset:2px;}
+.wrap{max-width:780px; margin:0 auto; padding:0 16px;}
+
+/* ---------- Cabecera ---------- */
+.top{position:sticky; top:env(safe-area-inset-top, 0px); z-index:10; background:var(--surface); border-bottom:1px solid var(--line);}
+.brand{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0 10px;}
+.brand h1{margin:0; font-family:var(--f-tech); font-weight:700; font-size:1.18rem; letter-spacing:.01em; line-height:1.15;}
+.brand p{margin:2px 0 0; color:var(--muted); font-size:.82rem;}
+.brand-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
+.install-btn{border:0; border-radius:10px; padding:0 12px; height:38px; background:var(--accent); color:var(--accent-ink); font-family:var(--f-tech); font-weight:700; font-size:.9rem; cursor:pointer;}
+.install-btn[hidden]{display:none;}
+.icon-btn{flex-shrink:0; width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); cursor:pointer; font-size:1rem;}
+.selectors{display:grid; gap:8px; padding-bottom:10px;}
+.seg{display:grid; grid-template-columns:repeat(auto-fit, minmax(0,1fr)); background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:3px; gap:3px;}
+.seg button{border:0; background:transparent; border-radius:9px; padding:8px 10px; cursor:pointer; text-align:left; line-height:1.2; min-height:44px;}
+.seg button b{display:block; font-family:var(--f-tech); font-weight:600; font-size:.98rem;}
+.seg button span{font-size:.74rem; color:var(--muted);}
+.seg button[aria-pressed="true"]{background:var(--surface); box-shadow:0 0 0 1px var(--line-strong);}
+.seg button[aria-pressed="true"] b{color:var(--accent);}
+.batt-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.batt-row > span{font-size:.78rem; color:var(--muted);}
+.chip{border:1px solid var(--line); background:transparent; border-radius:999px; padding:6px 12px; font-size:.84rem; cursor:pointer; min-height:36px;}
+.chip[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-soft); color:var(--text); font-weight:600;}
+.batt-row .single{font-size:.84rem; font-weight:600;}
+.tabs{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; margin:0 -16px; padding:0 16px;}
+.tabs::-webkit-scrollbar{display:none;}
+.tabs button{flex:1 0 auto; border:0; background:transparent; padding:11px 12px 10px; cursor:pointer; color:var(--muted);
+  font-family:var(--f-tech); font-weight:600; font-size:.95rem; border-bottom:2px solid transparent; white-space:nowrap;}
+.tabs button[aria-selected="true"]{color:var(--text); border-bottom-color:var(--accent);}
+
+/* ---------- Contenido ---------- */
+main{padding:18px 0 48px;}
+.warnbox{background:var(--surface); border:1px solid var(--danger); color:var(--danger); border-radius:10px; padding:12px; font-size:.86rem; margin-bottom:16px;}
+.setpoints[hidden]{display:none;}
+.setpoints{background:var(--lcd-bg); border:1px solid var(--lcd-line); border-radius:14px; padding:14px; margin-bottom:22px; color:var(--lcd-text);}
+.setpoints-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:10px;}
+.setpoints-head h2{margin:0; font-family:var(--f-tech); font-weight:600; font-size:1rem; color:#e9f6f8;}
+.setpoints-head span{font-size:.74rem; color:var(--lcd-dim);}
+.sp-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:1px; background:var(--lcd-line); border:1px solid var(--lcd-line); border-radius:10px; overflow:hidden;}
+.sp{background:var(--lcd-bg); padding:10px 10px 9px;}
+.sp .v{font-family:var(--f-tech); font-weight:700; font-size:1.7rem; line-height:1; letter-spacing:.02em; text-shadow:0 0 12px rgba(168,230,240,.25);}
+.sp .l{font-size:.72rem; color:var(--lcd-dim); margin-top:5px; line-height:1.25;}
+.sp .m{font-family:var(--f-tech); font-size:.72rem; color:#f0c06a;}
+@media (max-width:560px){ .sp-grid{grid-template-columns:repeat(2, 1fr);} }
+
+section[hidden]{display:none;}
+.block{margin-bottom:26px;}
+.block > h2{font-family:var(--f-tech); font-weight:700; font-size:1.15rem; margin:0 0 4px;}
+.block > .lead{color:var(--muted); font-size:.86rem; margin:0 0 12px;}
+.sheet{background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+.specs{display:grid; grid-template-columns:1fr 1fr;}
+.spec{display:flex; flex-direction:column; gap:1px; padding:10px 14px; border-bottom:1px solid var(--line);}
+.spec:nth-child(odd){border-right:1px solid var(--line);}
+.spec .k{font-size:.76rem; color:var(--muted);}
+.spec .v{font-family:var(--f-tech); font-weight:600; font-size:1.06rem;}
+@media (max-width:420px){ .spec{padding:9px 11px;} .spec .v{font-size:.98rem;} }
+.sub-sheet{margin-top:12px;}
+.sub-sheet h3{font-family:var(--f-tech); font-weight:600; font-size:1rem; margin:0; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--surface-2);}
+
+.callout{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:start; margin-top:10px; padding:11px 13px;
+  border-radius:10px; border:1px solid var(--line); background:var(--surface); font-size:.86rem;}
+.callout .tag{font-family:var(--f-tech); font-weight:700; font-size:.74rem; padding:2px 7px; border-radius:6px; color:#fff; white-space:nowrap; margin-top:1px;}
+.callout.crit{border-color:var(--danger);} .callout.crit .tag{background:var(--danger);}
+.callout.warn .tag{background:var(--warn);}
+.callout.ok .tag{background:var(--ok);}
+.callout.info .tag{background:var(--info);}
+.callout p{margin:0;}
+
+/* ---------- Configurar ---------- */
+.cfg-bar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+.progress{flex:1 1 220px;}
+.progress-track{height:8px; background:var(--surface-2); border:1px solid var(--line); border-radius:99px; overflow:hidden;}
+.progress-fill{height:100%; width:0; background:var(--ok); transition:width .25s;}
+.progress-text{font-size:.8rem; color:var(--muted); margin-top:5px;}
+.switch{display:flex; align-items:center; gap:8px; font-size:.84rem; cursor:pointer; user-select:none;}
+.switch input{width:18px; height:18px; accent-color:var(--accent);}
+.menu{display:grid; grid-template-columns:auto auto 1fr; gap:12px; align-items:start; background:var(--surface);
+  border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:8px;}
+.menu.first{border-color:var(--info);}
+.menu.done{opacity:.55;}
+.check{width:26px; height:26px; border-radius:7px; border:2px solid var(--line-strong); background:var(--surface-2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:.85rem; margin-top:4px;}
+.check[aria-checked="true"]{background:var(--ok); border-color:var(--ok); color:#fff;}
+.num{font-family:var(--f-tech); font-weight:700; font-size:1.15rem; background:var(--lcd-bg); color:var(--lcd-text);
+  border-radius:8px; padding:4px 8px; min-width:44px; text-align:center; letter-spacing:.04em;}
+.menu-title{display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-weight:600; font-size:.95rem; margin-bottom:6px;}
+.pill{font-family:var(--f-tech); font-weight:600; font-size:.72rem; padding:1px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted);}
+.pill.change{border-color:var(--accent); color:var(--accent);}
+.pill.first{border-color:var(--info); color:var(--info);}
+.pill.verify{border-color:var(--warn); color:var(--warn);}
+.vals{display:flex; align-items:stretch; gap:6px; flex-wrap:wrap; margin-bottom:6px;}
+.val{border:1px solid var(--line); border-radius:8px; padding:4px 9px; font-size:.78rem; color:var(--muted); background:var(--surface-2); line-height:1.3;}
+.val b{display:block; font-family:var(--f-tech); font-size:1.02rem; color:var(--text);}
+.val.rec{border-color:var(--ok); background:transparent;}
+.val.rec b{color:var(--ok);}
+.arrow{align-self:center; color:var(--muted);}
+.why{font-size:.84rem; color:var(--muted); margin:0;}
+.ghost{width:100%; margin-top:10px; border:1px dashed var(--line-strong); background:transparent; border-radius:10px; padding:11px; cursor:pointer; color:var(--muted); font-size:.86rem;}
+.empty{padding:22px; text-align:center; color:var(--muted); font-size:.88rem; background:var(--surface); border:1px solid var(--line); border-radius:12px;}
+
+/* ---------- Reserva ---------- */
+.gauge-card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px;}
+.gauge{position:relative; height:132px;}
+.bar{position:absolute; left:0; right:0; top:48px; height:36px; display:flex; border-radius:8px; overflow:hidden;}
+.zone{display:flex; align-items:center; justify-content:center; font-family:var(--f-tech); font-weight:600; font-size:.7rem; color:#10181d; white-space:nowrap; overflow:hidden;}
+.zone.crit{background:var(--z-crit); color:#fff;} .zone.danger{background:var(--z-danger);} .zone.reserve{background:var(--z-reserve);}
+.zone.normal{background:var(--z-normal);} .zone.full{background:var(--z-full); color:#fff;}
+.mk{position:absolute; transform:translateX(-50%); text-align:center; font-size:.68rem; line-height:1.15; color:var(--muted); white-space:nowrap; height:48px;}
+.mk b{display:block; font-family:var(--f-tech); font-size:.86rem; color:var(--text);}
+.mk::after{content:""; position:absolute; left:50%; width:1px; height:10px; background:var(--line-strong);}
+.mk.up{top:0;} .mk.up::after{bottom:0;}
+.mk.dn{top:84px; padding-top:12px;} .mk.dn::after{top:0;}
+.mk.l{transform:none; text-align:left;} .mk.l::after{left:0;}
+.mk.r{transform:translateX(-100%); text-align:right;} .mk.r::after{left:auto; right:0;}
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:6px; font-size:.78rem; color:var(--muted);}
+.legend span{display:flex; align-items:center; gap:6px;}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+.tablewrap{overflow-x:auto; margin-top:12px;}
+table.soc{width:100%; border-collapse:collapse; font-size:.86rem; background:var(--surface);}
+table.soc th, table.soc td{border-bottom:1px solid var(--line); padding:8px 10px; text-align:left;}
+table.soc th{font-family:var(--f-tech); font-weight:600; color:var(--muted); font-size:.8rem; background:var(--surface-2);}
+table.soc td:nth-child(2){font-family:var(--f-tech); font-weight:600; font-size:.98rem;}
+table.soc tr.hl td{background:var(--accent-soft);}
+
+/* ---------- Formularios ---------- */
+.form{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px;}
+.field{margin-bottom:12px;}
+.field label{display:block; font-size:.8rem; color:var(--muted); margin-bottom:4px;}
+.field input, .field select{width:100%; background:var(--surface-2); border:1px solid var(--line); color:var(--text); padding:10px 11px; border-radius:9px; font:inherit; font-size:1rem;}
+.fields2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.results{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-top:4px;}
+.res{display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:10px 12px; background:var(--surface);}
+.res .k{font-size:.84rem; color:var(--muted);}
+.res .v{font-family:var(--f-tech); font-weight:700; font-size:1.1rem; text-align:right;}
+.res.big .v{color:var(--accent); font-size:1.3rem;}
+.btn{width:100%; border:0; border-radius:10px; padding:13px; font-family:var(--f-tech); font-weight:700; font-size:1rem; cursor:pointer; margin-top:8px;
+  background:var(--accent); color:var(--accent-ink);}
+.btn.sec{background:var(--surface-2); color:var(--text); border:1px solid var(--line);}
+.btn-row{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+textarea{width:100%; min-height:260px; margin-top:10px; background:var(--surface-2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:11px;
+  font:.8rem/1.5 ui-monospace, Menlo, Consolas, monospace; resize:vertical;}
+.copied{font-size:.82rem; color:var(--ok); margin-top:6px; min-height:1.2em;}
+
+#printArea{display:none;}
+@media print{
+  body.printing .top, body.printing main, body.printing::before{display:none !important;}
+  body.printing #printArea{display:block !important; color:#000; background:#fff; font-family:Arial, sans-serif;}
+  #printArea h1{font-size:1.3rem; margin:18px 0 2px;}
+  #printArea h2{font-size:1rem; margin:16px 0 6px; border-bottom:1px solid #888; padding-bottom:3px;}
+  #printArea table{width:100%; border-collapse:collapse; font-size:.82rem; margin-bottom:12px;}
+  #printArea td, #printArea th{border:1px solid #999; padding:4px 7px; text-align:left;}
+  #printArea .small{font-size:.74rem; color:#444;}
+  #printArea .pb{page-break-before:always;}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand">
+      <div>
+        <h1 id="hTitle">Configuración solar</h1>
+        <p id="hSub"></p>
+      </div>
+      <div class="brand-actions">
+        <button class="install-btn" id="installBtn" hidden>Instalar app</button>
+        <button class="icon-btn" id="themeBtn" aria-label="Cambiar entre tema claro y oscuro">◐</button>
+      </div>
+    </div>
+    <div class="selectors">
+      <div class="seg" id="invSeg" role="group" aria-label="Inversor"></div>
+      <div class="batt-row" id="battRow"></div>
+    </div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="bateria">Batería</button>
+      <button role="tab" data-tab="inversor">Inversor</button>
+      <button role="tab" data-tab="config">Configurar</button>
+      <button role="tab" data-tab="reserva">Reserva 10%</button>
+      <button role="tab" data-tab="exportar">Exportar</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="warnbox" id="jsWarn">El JavaScript de esta página no se ejecutó. Casi siempre es porque el archivo se copió incompleto: debe terminar en &lt;/html&gt;.</div>
+
+  <div class="setpoints" id="setpoints"></div>
+
+  <section id="bateria" role="tabpanel"></section>
+  <section id="inversor" role="tabpanel"></section>
+
+  <section id="config" role="tabpanel">
+    <div class="block">
+      <h2>Menús del inversor</h2>
+      <p class="lead">De fábrica es lo que trae según su manual; en verde, lo que debes dejar para esta batería. Los códigos son los que verás en la pantalla.</p>
+      <div id="cfgNote"></div>
+      <div class="cfg-bar">
+        <div class="progress">
+          <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+          <div class="progress-text" id="progText"></div>
+        </div>
+        <label class="switch"><input type="checkbox" id="onlyChanges"> Solo los que hay que cambiar</label>
+      </div>
+      <div id="menuList"></div>
+      <button class="ghost" id="resetBtn">Reiniciar el checklist de esta batería</button>
+    </div>
+  </section>
+
+  <section id="reserva" role="tabpanel"></section>
+
+  <section id="exportar" role="tabpanel">
+    <div class="block">
+      <h2>Exportar configuración</h2>
+      <p class="lead">Reporte con specs y menús (de fábrica y recomendado). Cópialo para WhatsApp o guárdalo como PDF.</p>
+      <div class="form">
+        <div class="seg" id="scopeSeg" role="group" aria-label="Alcance del reporte">
+          <button data-scope="current" aria-pressed="true"><b>Esta combinación</b><span id="scopeCur"></span></button>
+          <button data-scope="all" aria-pressed="false"><b>Todo</b><span>Las 3 baterías</span></button>
+        </div>
+        <button class="btn" id="genBtn">Generar reporte</button>
+        <textarea id="exportText" readonly placeholder="Toca Generar reporte para ver el texto aquí."></textarea>
+        <div class="copied" id="copied" aria-live="polite"></div>
+        <div class="btn-row">
+          <button class="btn sec" id="copyBtn">Copiar texto</button>
+          <button class="btn sec" id="printBtn">Imprimir / PDF</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="printArea"></div>
+
+<script>
+const SYSTEMS = {
+  sumry: {
+    title: "⚡ Sumry HGX 4KW · 120V/60Hz",
+    sub: "Batería Dumfume 24V 100Ah LiFePO4 — sin RS485",
+    name: "Sumry HGX 4KW + Dumfume 24V 100Ah",
+    reportTitle: "SUMRY HGX 4KW (120V/60Hz) + BATERÍA DUMFUME 24V 100Ah LiFePO4",
+    stateKey: "sumry_config_state",
+    mppt: {maxV:350, minV:55, maxA:140, maxW:5600, inputs:1},
+    menus: [
+      {num:"01", name:"Prioridad de salida", defCode:"SBU", defMeaning:"Solar-Batería-Red", rec:"SBU", recMeaning:"Igual que de fábrica", why:"Ya viene así de fábrica — usa batería/solar primero, red de respaldo.", confirmed:true},
+      {num:"02", name:"Corriente máx. de carga combinada", defCode:"40A", defMeaning:"Valor de fábrica", rec:"30A", recMeaning:"Reducido", why:"Dentro de lo recomendado por Dumfume (20–50A), con margen bajo su máximo y muy por debajo del límite del BMS (100A).", confirmed:true},
+      {num:"03", name:"Voltaje de entrada AC", defCode:"UPS", defMeaning:"Rango estrecho (sensible)", rec:"APL*", recMeaning:"Rango amplio (si aparece esta opción)", why:"*El manual solo confirma “UPS” como valor de fábrica. “APL” es la opción de rango amplio típica de este tipo de pantalla — verifica que exista al navegar con UP/DOWN. Útil porque la red cubana fluctúa mucho.", confirmed:false},
+      {num:"04", name:"Modo ahorro de energía", defCode:"SdS", defMeaning:"Código de fábrica", rec:"SdS", recMeaning:"Dejar como viene", why:"El manual no detalla si SdS es ON u OFF. Si notas demoras al arrancar la nevera o la bomba, prueba la otra opción que aparezca en pantalla.", confirmed:true},
+      {num:"05", name:"Tipo de batería", defCode:"USE", defMeaning:"Definido por usuario", rec:"USE", recMeaning:"Igual que de fábrica", why:"Correcto para esta batería: no tiene RS485/comunicación BMS (confirmado en su manual), así que el inversor no puede usar “Lib” automático.", confirmed:true},
+      {num:"06", name:"Auto-reinicio tras sobrecarga", defCode:"Ltd", defMeaning:"Deshabilitado", rec:"(opción contraria a Ltd)", recMeaning:"Habilitado", why:"De fábrica viene deshabilitado. Para uso sin supervisión constante, cambia a la otra opción disponible en pantalla — el manual no da el código exacto del estado habilitado.", confirmed:false},
+      {num:"07", name:"Auto-reinicio tras sobretemperatura", defCode:"ttE", defMeaning:"Habilitado", rec:"ttE", recMeaning:"Igual que de fábrica", why:"Ya viene habilitado de fábrica — déjalo así.", confirmed:true},
+      {num:"08", name:"Voltaje de salida", defCode:"120V", defMeaning:"Valor de fábrica", rec:"120V", recMeaning:"Igual", why:"Estándar Cuba — ya viene correcto.", confirmed:true},
+      {num:"09", name:"Frecuencia de salida", defCode:"60Hz", defMeaning:"Valor de fábrica", rec:"60Hz", recMeaning:"Igual", why:"Estándar Cuba — ya viene correcto.", confirmed:true},
+      {num:"11", name:"Corriente máx. desde la red", defCode:"40A", defMeaning:"Valor de fábrica", rec:"15A", recMeaning:"Reducido", why:"Cuida el circuito eléctrico de la casa, evita disparar breakers domésticos.", confirmed:true},
+      {num:"12", name:"Volver a Utility (modo SBU)", defCode:"24.5V", defMeaning:"Valor de fábrica", rec:"25.2V", recMeaning:"Subido", why:"20% SOC oficial Dumfume — cambia a red un poco antes que el valor de fábrica, dejando la reserva del 10% intacta.", confirmed:true},
+      {num:"13", name:"Volver a Batería (modo SBU)", defCode:"27.0V", defMeaning:"Valor de fábrica", rec:"26.8V", recMeaning:"Ligeramente bajado", why:"80% SOC oficial Dumfume — casi igual al de fábrica, un poco más permisivo para volver a depender de la batería.", confirmed:true},
+      {num:"16", name:"Prioridad de carga", defCode:"CSO", defMeaning:"Solar primero, red si no hay sol", rec:"CSO", recMeaning:"Igual que de fábrica", why:"Ya viene así de fábrica — maximiza el uso solar.", confirmed:true},
+      {num:"18", name:"Control de alarma", defCode:"bON", defMeaning:"ON (habilitado)", rec:"bON", recMeaning:"Igual", why:"Ya viene habilitado — te avisa de fallas.", confirmed:true},
+      {num:"19", name:"Retorno a pantalla default", defCode:"ESP", defMeaning:"Vuelve a pantalla principal", rec:"ESP", recMeaning:"Igual", why:"Preferencia, no afecta el funcionamiento.", confirmed:true},
+      {num:"20", name:"Control de retroiluminación", defCode:"lON", defMeaning:"ON (encendida)", rec:"lON", recMeaning:"Igual", why:"Preferencia, no afecta el funcionamiento.", confirmed:true},
+      {num:"22", name:"Beep al perder fuente primaria", defCode:"AOF", defMeaning:"OFF (sin beep)", rec:"(opción contraria a AOF)", recMeaning:"ON (con beep)", why:"De fábrica viene sin beep. Cámbialo a la opción contraria en pantalla para que te avise cuando se vaya la luz — el manual no da el código exacto del ON.", confirmed:false},
+      {num:"25", name:"Registro de fallas", defCode:"FEN", defMeaning:"Habilitado", rec:"FEN", recMeaning:"Igual", why:"Ya viene habilitado — útil para diagnóstico.", confirmed:true},
+      {num:"26", name:"Voltaje Bulk/Absorción", defCode:"28.2V", defMeaning:"Valor de fábrica", rec:"28.4V", recMeaning:"Subido ligeramente", why:"Recuperación oficial tras sobrecarga de Dumfume — no forzar hasta el corte real de 29.2V.", confirmed:true},
+      {num:"27", name:"Voltaje Float", defCode:"27.2V", defMeaning:"Valor de fábrica", rec:"27.2V", recMeaning:"Igual (no aplica realmente a litio)", why:"LiFePO4 no necesita float continuo, pero el menú lo exige; se deja igual al de fábrica.", confirmed:true},
+      {num:"29", name:"Corte bajo DC", defCode:"24.0V", defMeaning:"Valor de fábrica", rec:"24.4V", recMeaning:"Subido ligeramente", why:"10% SOC oficial Dumfume — un poco más conservador que el valor de fábrica, deja la reserva real intacta antes del corte del BMS (20V).", confirmed:true},
+      {num:"30", name:"Restaurar valores de fábrica", defCode:"OFF", defMeaning:"No aplicar", rec:"OFF", recMeaning:"Igual", why:"Dejar en OFF salvo que quieras reiniciar toda la configuración.", confirmed:true},
+      {num:"33", name:"Ecualización de batería", defCode:"OFF", defMeaning:"No usado", rec:"OFF", recMeaning:"Igual", why:"Es función para plomo-ácido, no aplica a litio.", confirmed:true},
+    ],
+    batteryFacts: [
+      ["Capacidad nominal","25.6V / 100Ah / 2560Wh"],
+      ["Corte bajo DC (10% reserva)","24.4V"],
+      ["Cambio a red (20%)","25.2V"],
+      ["Vuelta a batería (80%)","26.8V"],
+      ["Carga Bulk/Absorción","28.4V"],
+      ["Corte real del BMS (no tocar)","20V – 21.6V"],
+      ["Comunicación BMS / RS485","No soportada"],
+      ["Potencia máxima real","2560W (cuidado con el inversor a 4000W)"],
+    ],
+    mpptFacts: [
+      ["Corriente MPPT","140A"],
+      ["Potencia PV máxima","5600W"],
+      ["Rango de voltaje PV","55–350VDC"],
+      ["Eficiencia máxima","98%"],
+    ],
+    footer: "Tipo de batería configurado como USE (definido por usuario) porque esta batería no tiene puerto RS485/comunicación BMS. Se dejó un 10% de reserva en la batería como margen de seguridad ante apagones largos."
+  },
+
+  sumryf: {
+    title: "⚡ Sumry HGX 4KW · 120V/60Hz",
+    sub: "Batería Felicity FLA24171-EU 25.6V 4.4kWh LiFePO4 — modo USE",
+    name: "Sumry HGX 4KW + Felicity FLA24171-EU",
+    reportTitle: "SUMRY HGX 4KW (120V/60Hz) + BATERÍA FELICITY FLA24171-EU 25.6V 4.4kWh LiFePO4",
+    stateKey: "sumryf_config_state",
+    mppt: {maxV:350, minV:55, maxA:140, maxW:5600, inputs:1},
+    menus: [
+      {num:"01", name:"Prioridad de salida", defCode:"SBU", defMeaning:"Solar-Batería-Red", rec:"SBU", recMeaning:"Igual que de fábrica", why:"Solar y batería primero; pasa a la red al llegar al menú 12. Si prefieres tener la batería siempre llena como reserva para los apagones, usa SUb (solar → red → batería).", confirmed:true},
+      {num:"02", name:"Corriente máx. de carga combinada", defCode:"40A", defMeaning:"Valor de fábrica", rec:"50A", recMeaning:"≈0.3C", why:"Carga suave para 171Ah, muy por debajo de los 120A máximos de Felicity. El MPPT del Sumry puede dar hasta 140A, así que nunca subas este menú por encima de 120A.", confirmed:true},
+      {num:"03", name:"Voltaje de entrada AC", defCode:"UPS", defMeaning:"Rango estrecho (sensible)", rec:"APL*", recMeaning:"Rango amplio (si aparece esta opción)", why:"*El manual solo confirma “UPS” como valor de fábrica. “APL” es la opción de rango amplio típica de este tipo de pantalla — verifica que exista al navegar con UP/DOWN. Útil porque la red cubana fluctúa mucho.", confirmed:false},
+      {num:"04", name:"Modo ahorro de energía", defCode:"SdS", defMeaning:"Código de fábrica", rec:"SdS", recMeaning:"Dejar como viene", why:"El manual no detalla si SdS es ON u OFF. Si notas demoras al arrancar la nevera o la bomba, prueba la otra opción que aparezca en pantalla.", confirmed:true},
+      {num:"05", name:"Tipo de batería", defCode:"USE", defMeaning:"Definido por usuario", rec:"USE", recMeaning:"Igual que de fábrica", why:"La batería tiene RS485/CAN, pero sin cable y protocolo compatibles el modo Lib da error 61. En USE controlas tú los voltajes; el SOC real lo ves en la pantalla de la batería.", confirmed:true},
+      {num:"06", name:"Auto-reinicio tras sobrecarga", defCode:"Ltd", defMeaning:"Deshabilitado", rec:"(opción contraria a Ltd)", recMeaning:"Habilitado", why:"De fábrica viene deshabilitado. Para uso sin supervisión constante, cambia a la otra opción disponible en pantalla — el manual no da el código exacto del estado habilitado.", confirmed:false},
+      {num:"07", name:"Auto-reinicio tras sobretemperatura", defCode:"ttE", defMeaning:"Habilitado", rec:"ttE", recMeaning:"Igual que de fábrica", why:"Ya viene habilitado de fábrica — déjalo así.", confirmed:true},
+      {num:"08", name:"Voltaje de salida", defCode:"120V", defMeaning:"Valor de fábrica", rec:"120V", recMeaning:"Igual", why:"Estándar Cuba — ya viene correcto.", confirmed:true},
+      {num:"09", name:"Frecuencia de salida", defCode:"60Hz", defMeaning:"Valor de fábrica", rec:"60Hz", recMeaning:"Igual", why:"Estándar Cuba — ya viene correcto.", confirmed:true},
+      {num:"11", name:"Corriente máx. desde la red", defCode:"40A", defMeaning:"Valor de fábrica", rec:"15A", recMeaning:"Reducido", why:"Cuida el circuito eléctrico de la casa, evita disparar breakers domésticos.", confirmed:true},
+      {num:"12", name:"Volver a Utility (modo SBU)", defCode:"24.5V", defMeaning:"Valor de fábrica", rec:"25.2V", recMeaning:"Subido", why:"Bajo carga equivale a ≈15–20% SOC: pasa a la red antes de entrar en la reserva del 10%. Si al cambiar la pantalla de la batería marca menos de 15%, súbelo a 25.6V.", confirmed:true},
+      {num:"13", name:"Volver a Batería (modo SBU)", defCode:"27.0V", defMeaning:"Valor de fábrica", rec:"27.0V", recMeaning:"Igual que de fábrica", why:"Vuelve a la batería cuando ya está bien cargada. Comprueba en la pantalla de la batería qué SOC marca en ese momento.", confirmed:true},
+      {num:"16", name:"Prioridad de carga", defCode:"CSO", defMeaning:"Solar primero, red si no hay sol", rec:"CSO", recMeaning:"Igual que de fábrica", why:"Ya viene así de fábrica — maximiza el uso solar.", confirmed:true},
+      {num:"18", name:"Control de alarma", defCode:"bON", defMeaning:"ON (habilitado)", rec:"bON", recMeaning:"Igual", why:"Ya viene habilitado — te avisa de fallas.", confirmed:true},
+      {num:"19", name:"Retorno a pantalla default", defCode:"ESP", defMeaning:"Vuelve a pantalla principal", rec:"ESP", recMeaning:"Igual", why:"Preferencia, no afecta el funcionamiento.", confirmed:true},
+      {num:"20", name:"Control de retroiluminación", defCode:"lON", defMeaning:"ON (encendida)", rec:"lON", recMeaning:"Igual", why:"Preferencia, no afecta el funcionamiento.", confirmed:true},
+      {num:"22", name:"Beep al perder fuente primaria", defCode:"AOF", defMeaning:"OFF (sin beep)", rec:"(opción contraria a AOF)", recMeaning:"ON (con beep)", why:"De fábrica viene sin beep. Cámbialo a la opción contraria en pantalla para que te avise cuando se vaya la luz — el manual no da el código exacto del ON.", confirmed:false},
+      {num:"25", name:"Registro de fallas", defCode:"FEN", defMeaning:"Habilitado", rec:"FEN", recMeaning:"Igual", why:"Ya viene habilitado — útil para diagnóstico.", confirmed:true},
+      {num:"26", name:"Voltaje Bulk/Absorción", defCode:"28.2V", defMeaning:"Valor de fábrica", rec:"28.4V", recMeaning:"3.55V/celda", why:"Felicity permite hasta 28.8V; con 28.4V llega prácticamente al 100% sin llevar las celdas al límite. Menos estrés, más vida útil.", confirmed:true},
+      {num:"27", name:"Voltaje Float", defCode:"27.2V", defMeaning:"Valor de fábrica", rec:"27.2V", recMeaning:"3.40V/celda", why:"Felicity pone la flotación igual a la carga (28.8V), pero tener el litio empujado a tope todo el día lo envejece. 27.2V la mantiene cerca del 100% en reposo sin seguir forzándola.", confirmed:true},
+      {num:"29", name:"Corte bajo DC", defCode:"24.0V", defMeaning:"Valor de fábrica", rec:"24.0V", recMeaning:"Igual — corte oficial Felicity", why:"Es el corte que recomienda Felicity sin comunicación y equivale a ≈10% en reposo (3.0V/celda). Bajo carga el voltaje cae, así que en la práctica corta con algo más de 10%.", confirmed:true},
+      {num:"30", name:"Restaurar valores de fábrica", defCode:"OFF", defMeaning:"No aplicar", rec:"OFF", recMeaning:"Igual", why:"Dejar en OFF salvo que quieras reiniciar toda la configuración.", confirmed:true},
+      {num:"33", name:"Ecualización de batería", defCode:"OFF", defMeaning:"No usado", rec:"OFF", recMeaning:"Igual", why:"Es función para plomo-ácido, no aplica a litio.", confirmed:true},
+    ],
+    batteryFacts: [
+      ["Capacidad nominal","25.6V / ≈171Ah / 4.4kWh"],
+      ["Corte bajo DC (10% reserva)","24.0V — corte oficial Felicity"],
+      ["Cambio a red","25.2V"],
+      ["Vuelta a batería","27.0V"],
+      ["Carga Bulk/Absorción","28.4V (Felicity permite hasta 28.8V)"],
+      ["Flotación","27.2V (Felicity indica 28.8V)"],
+      ["Rango de operación","22.4V – 28.8V"],
+      ["Corriente máx. continua","120A (pico 150A por 15s)"],
+      ["Potencia máxima","3000W (cuidado con el inversor a 4000W)"],
+      ["Comunicación BMS","RS485/CAN disponible — no usada (modo USE)"],
+    ],
+    mpptFacts: [
+      ["Corriente MPPT","140A"],
+      ["Potencia PV máxima","5600W"],
+      ["Rango de voltaje PV","55–350VDC"],
+      ["Eficiencia máxima","98%"],
+    ],
+    footer: "Tipo de batería USE: la batería tiene RS485/CAN, pero se configura manual partiendo de los valores de Felicity para uso sin comunicación, con carga más suave (28.4V bulk / 27.2V flotación) y corte a 24.0V (≈10% de reserva). Potencia sostenida recomendada: hasta ~3000W con una batería."
+  },
+
+  ep: {
+    title: "⚡ ExpertPower 6.5KW · 120V/60Hz",
+    sub: "Batería Ogrphy 51.2V 100Ah LiFePO4 — sin RS485",
+    name: "ExpertPower IVV48V6.5KW + Ogrphy 51.2V 100Ah",
+    reportTitle: "EXPERTPOWER IVV48V6.5KW (120V/60Hz) + BATERÍA OGRPHY 51.2V 100Ah LiFePO4",
+    stateKey: "ep_config_state",
+    mppt: {maxV:500, minV:90, maxA:18, maxW:8000, inputs:2},
+    menus: [
+      {num:"05", name:"Tipo de batería", defCode:"AGn", defMeaning:"AGM", rec:"USE", recMeaning:"Definido por usuario", first:true, why:"Hazlo primero: desbloquea los menús 26, 27 y 29. No uses LIb/LIC sin cable RS485 (aviso 61 y deja de cargar/descargar).", confirmed:true},
+      {num:"01", name:"Prioridad de salida", defCode:"USb", defMeaning:"Red primero", rec:"SbU", recMeaning:"Solar → Batería → Red", why:"Usa solar y batería primero; pasa a la red solo al llegar al voltaje del menú 12.", confirmed:true},
+      {num:"02", name:"Corriente máx. de carga total", defCode:"60A", defMeaning:"Solar + red", rec:"50A", recMeaning:"0.5C", why:"0.5C es la condición con la que Ogrphy declara los ciclos de vida. Para cuidarla al máximo, 30A (recomendado del fabricante). Pasos de 10A.", confirmed:true},
+      {num:"03", name:"Rango de voltaje AC de entrada", defCode:"APL", defMeaning:"Rango amplio", rec:"APL", recMeaning:"Igual que de fábrica", why:"Rango amplio (corta a 80V±7 / 140V±7 en este modelo de 120V). Mejor para una red que fluctúa. UPS solo si alimentas PCs sensibles.", confirmed:true},
+      {num:"06", name:"Auto-reinicio tras sobrecarga", defCode:"Ltd", defMeaning:"Deshabilitado", rec:"LtE", recMeaning:"Habilitado", why:"Para que se recupere solo si alguien conecta demasiada carga y no hay nadie para reiniciarlo.", confirmed:true},
+      {num:"07", name:"Auto-reinicio tras sobretemperatura", defCode:"ttd", defMeaning:"Deshabilitado", rec:"ttE", recMeaning:"Habilitado", why:"Se reinicia solo cuando se enfría.", confirmed:true},
+      {num:"09", name:"Frecuencia de salida", defCode:"50", defMeaning:"50Hz", rec:"60", recMeaning:"60Hz", why:"De fábrica viene en 50Hz; en Cuba es 60Hz. Motores y relojes lo necesitan.", confirmed:true},
+      {num:"10", name:"Voltaje de salida", defCode:"230V*", defMeaning:"Según el manual", rec:"120V", recMeaning:"Verificar en pantalla", why:"*El manual copia las opciones 220/230/240V del modelo de 230V, pero sus tablas de specs dicen 120Vac para este modelo. Revisa que la pantalla marque 120V.", confirmed:false},
+      {num:"11", name:"Corriente máx. de carga desde la red", defCode:"30A", defMeaning:"Valor de fábrica", rec:"30A", recMeaning:"Igual", why:"No carga la red de la casa de más. Si el #02 queda por debajo del #11, el inversor usa el valor del #02.", confirmed:true},
+      {num:"12", name:"Volver a la red (en SBU)", defCode:"46V", defMeaning:"Valor de fábrica", rec:"50V", recMeaning:"Subido", why:"Tu reserva cuando hay red: pasa a la red antes de gastar el último ~10–15%. Máximo permitido 51V.", confirmed:true},
+      {num:"13", name:"Volver a batería (en SBU)", defCode:"54V", defMeaning:"Valor de fábrica", rec:"54V", recMeaning:"Igual", why:"Vuelve a usar la batería cuando está prácticamente llena.", confirmed:true},
+      {num:"16", name:"Prioridad del cargador", defCode:"SNU", defMeaning:"Solar y red a la vez", rec:"CSO", recMeaning:"Solar primero", why:"Aprovecha el sol; la red carga solo si no hay solar. Usa SNU si quieres recuperar carga más rápido con red.", confirmed:true},
+      {num:"18", name:"Alarma", defCode:"bON", defMeaning:"Encendida", rec:"bON", recMeaning:"Igual", why:"Te avisa de fallas y batería baja.", confirmed:true},
+      {num:"22", name:"Beep al perder la fuente principal", defCode:"AON", defMeaning:"Encendido", rec:"AON", recMeaning:"Igual", why:"Te avisa cuando se va la corriente.", confirmed:true},
+      {num:"23", name:"Bypass por sobrecarga", defCode:"byd", defMeaning:"Deshabilitado", rec:"byd", recMeaning:"Igual", why:"Opcional: con byE, si hay sobrecarga en batería pasa a la red.", confirmed:true},
+      {num:"25", name:"Registro de fallas", defCode:"FEN", defMeaning:"Habilitado", rec:"FEN", recMeaning:"Igual", why:"Útil para diagnóstico.", confirmed:true},
+      {num:"26", name:"Voltaje de carga (bulk / C.V)", defCode:"56.4V", defMeaning:"Valor de fábrica", rec:"56.8V", recMeaning:"3.55V/celda", why:"Mínimo del rango de carga de la batería (56.8–58.4V). Carga completa sin rozar el corte del BMS en 58.4V.", confirmed:true},
+      {num:"27", name:"Voltaje de flotación", defCode:"54.0V", defMeaning:"Valor de fábrica", rec:"54.0V", recMeaning:"3.375V/celda", why:"Flotación típica para LiFePO4 de 16 celdas.", confirmed:true},
+      {num:"28", name:"Modo de salida AC", defCode:"SIG", defMeaning:"Unidad sola", rec:"SIG", recMeaning:"Igual", why:"Solo se cambia en sistemas en paralelo.", confirmed:true},
+      {num:"29", name:"Corte por bajo voltaje DC", defCode:"44.0V", defMeaning:"Valor de fábrica", rec:"48.0V", recMeaning:"Máximo permitido", why:"≈10% en reposo, 8V por encima del corte del BMS (40V). Con USE el corte es fijo sin importar la carga.", confirmed:true},
+      {num:"30", name:"Ecualización", defCode:"EdS", defMeaning:"Deshabilitada", rec:"EdS", recMeaning:"Igual", why:"Es para plomo-ácido (58.4V). En litio siempre apagada.", confirmed:true},
+      {num:"41", name:"Corriente máx. de descarga", defCode:"ddS", defMeaning:"Sin límite", rec:"150", recMeaning:"150A", why:"A 6500W el inversor pide ~150A y el BMS aguanta 200A continuos. No limita el inversor y añade una capa de protección.", confirmed:true},
+    ],
+    batteryFacts: [
+      ["Capacidad nominal","51.2V / 100Ah / 5120Wh"],
+      ["Corte bajo DC (menú 29)","48.0V — máximo que permite el inversor"],
+      ["Cambio a red (menú 12)","50V"],
+      ["Vuelta a batería (menú 13)","54V"],
+      ["Carga bulk (menú 26)","56.8V"],
+      ["Flotación (menú 27)","54.0V"],
+      ["Corte real del BMS (no tocar)","40V descarga / 58.4V carga"],
+      ["Comunicación BMS / RS485","No usada — solo Bluetooth"],
+      ["Descarga continua máx.","200A (el inversor a 6500W pide ~150A)"],
+    ],
+    mpptFacts: [
+      ["Potencia PV máxima","8000W"],
+      ["Voc máximo","500VDC"],
+      ["Rango MPPT","90–450VDC"],
+      ["Voltaje de arranque","80V ±5V"],
+      ["Corriente máx.","18A por entrada × 2 entradas"],
+    ],
+    footer: "Tipo de batería configurado como USE (definido por usuario) porque la batería no se comunica con el inversor por RS485. Reserva: cambio a red a 50V y corte a 48.0V (máximo permitido por el inversor), 8V por encima del corte del BMS."
+  }
+};
+
+Object.keys(SYSTEMS).forEach(function(k){
+  SYSTEMS[k].menus.sort(function(a,b){ return parseInt(a.num,10) - parseInt(b.num,10); });
+});
+
+const INVERTERS = {
+  sumry: {
+    name: "Sumry HGX 4KW", tag: "24V · 4000W", out: "120V / 60Hz",
+    batteries: ["sumry", "sumryf"],
+    sheets: [
+      {title: "Características generales", specs: [
+        ["Potencia nominal","4000W / 4000VA"], ["Entrada de batería","24VDC"],
+        ["Salida","120VAC / 60Hz (config. Cuba)"], ["Tipo de salida","Onda senoidal pura"],
+        ["Breaker AC recomendado","40A"], ["Pantalla","LCD táctil 6.25″"]]},
+      {title: "Controlador MPPT", specs: [
+        ["Corriente de carga MPPT","140A"], ["Potencia PV máxima","5600W"],
+        ["Rango de voltaje PV","55–350VDC"], ["Eficiencia máxima","98%"]],
+        notes: [["warn","Los 140A son la corriente de carga hacia la batería, no la corriente de entrada PV. Confirma la corriente PV en la placa antes de poner strings en paralelo."]]}
+    ]
+  },
+  ep: {
+    name: "ExpertPower 6.5KW", tag: "48V · 6500W", out: "120V / 60Hz",
+    batteries: ["ep"],
+    sheets: [
+      {title: "Características generales", specs: [
+        ["Potencia nominal","6500W"], ["Entrada de batería","48VDC"],
+        ["Salida","120VAC ±5% (60Hz para Cuba)"], ["Tipo de salida","Onda senoidal pura"],
+        ["Arranque (surge)","2× durante 5s"], ["Eficiencia pico","91%"],
+        ["Cargador desde red","120A máx."], ["Corriente AC de entrada","60A máx."],
+        ["Transferencia","10ms UPS / 20ms APL"], ["Paralelo","Hasta 6 unidades"]]},
+      {title: "Controlador MPPT (2 entradas)", specs: [
+        ["Potencia PV máxima","8000W"], ["Voc máximo del arreglo","500VDC"],
+        ["Rango MPPT","90–450VDC"], ["Voltaje de arranque","80V ±5V"],
+        ["Corriente por entrada","18A × 2"], ["Paneles en serie (ej. manual)","3–12 por entrada"]],
+        notes: [["warn","Inversor no aislado: solo paneles mono/poli clase A o CIGS sin aterrar. El manual exige caja de conexión PV con protección contra rayos."]]},
+      {title: "Protecciones y cableado (manual)", specs: [
+        ["Breaker de batería","250A / 70VDC"], ["Cable de batería","2/0 AWG · 67mm² (5 Nm)"],
+        ["Breaker AC de entrada","60A (1 unidad)"], ["Cable AC entrada/salida","4 AWG"],
+        ["Breaker PV por entrada","600VDC / 30A"], ["Cable PV","4–6mm² (10–12 AWG)"],
+        ["Supresor en entrada AC","275V 20–40kA (obligatorio)"], ["Espacio libre","20cm lados / 50cm arriba-abajo"]]}
+    ]
+  }
+};
+
+const DETAIL = {
+  sumry: {
+    batt: "Dumfume 100Ah", battFull: "Dumfume 24V 100Ah LiFePO4", source: "Specs del manual",
+    specs: [
+      ["Capacidad nominal","25.6V / 100Ah"], ["Energía","2560Wh"],
+      ["Ciclos","≥4000 a 80% de capacidad"], ["Método de carga","CC/CV"],
+      ["Corte por sobrecarga","29.2V"], ["Recuperación tras sobrecarga","28.4V"],
+      ["Carga recomendada","20–50A"], ["Descarga recomendada","0–60A"],
+      ["Máx. continua carga/descarga","100A"], ["Potencia máxima real","2560W"],
+      ["Corte por sobredescarga (BMS)","20V"], ["Recuperación tras sobredescarga","21.6V"],
+      ["Sobrecorriente de descarga","450A ±50"], ["Cortocircuito","2000A"],
+      ["Temperatura de operación","−20 °C a 80 °C"], ["Comunicación","No soportada"]],
+    notes: [
+      ["crit","A 4000W el inversor le pediría ~156–166A, por encima de sus 100A continuos (2560W reales). Para cargas largas no pases de ~2400–2500W con esta batería sola, o pon otra en paralelo (el manual permite máx. 1S4P)."],
+      ["warn","El manual dice “Communication: Not supported”: sin RS485 el inversor no lee el estado real de la batería. Tipo de batería: <b>USE</b>."]],
+    reserve: {
+      title: "Reserva del 10% con datos oficiales de Dumfume",
+      min: 20, max: 29.2,
+      zones: [[20,21.6,"crit"],[21.6,24.4,"danger"],[24.4,25.2,"reserve"],[25.2,26.8,"normal"],[26.8,29.2,"full"]],
+      markers: [[20,"BMS corta"],[21.6,"BMS recupera"],[24.4,"Menú 29"],[25.2,"Menú 12"],[26.8,"Menú 13"],[28.4,"Menú 26"]],
+      legend: {crit:"Zona del BMS (corte real)", danger:"Nunca debería llegar aquí", reserve:"Reserva 10%: el inversor corta aquí", normal:"Uso normal (20–80%)", full:"Carga / casi llena"},
+      head: ["SOC","Voltaje","Nota oficial Dumfume"],
+      rows: [["100%","27V","Carga completa en reposo"],["80%","26.8V","Rango alto de SOC"],["60%","26.6V","Voltaje estándar de trabajo"],["40%","26.3V","Descarga media"],["20%","25.2V","Zona de aviso bajo voltaje"],["10%","24.4V","Límite de descarga profunda"],["0%","20V","Mínimo absoluto, riesgo de daño"]],
+      hl: "10%",
+      notes: [["ok","El 10% oficial de Dumfume (24.4V) es el corte duro del inversor (menú 29) y su 20% (25.2V) es donde cambia a la red (menú 12). Así nunca te acercas a la zona de corte del BMS (20–21.6V)."]]
+    }
+  },
+  sumryf: {
+    batt: "Felicity 171Ah", battFull: "Felicity FLA24171-EU 25.6V 4.4kWh LiFePO4", source: "Specs del manual (Appendix I)",
+    specs: [
+      ["Voltaje nominal","25.6V"], ["Energía","4.4kWh (≈171Ah)"],
+      ["Rango de operación","22.4–28.8V"], ["Profundidad de descarga","≥95%"],
+      ["Máx. continua carga/descarga","120A"], ["Pico carga/descarga","150A durante 15s"],
+      ["Potencia máx. carga/descarga","3000W"], ["Ciclos","≥6000"],
+      ["Temperatura de carga","0 °C a 55 °C"], ["Temperatura de descarga","−20 °C a 55 °C"],
+      ["Comunicación","RS485 / CAN"], ["Pantalla","LCD + LED (muestra SOC)"],
+      ["Protecciones","BMS, breaker y fusible"], ["Grado de protección","IP21 (solo interior)"],
+      ["Paralelo","Hasta 15 unidades (66kWh)"], ["Peso / medidas","39kg · 482×433×194mm"]],
+    extra: {title: "Valores de Felicity para uso sin comunicación", specs: [
+      ["Voltaje máx. de carga","28.8V"], ["Voltaje de flotación","28.8V"],
+      ["Corriente máx. de carga","120A × N (N = baterías en paralelo)"], ["Voltaje de corte","24V"]],
+      notes: [["ok","El corte de 24V se usa tal cual (≈10% de reserva). La carga baja a 28.4V y la flotación a 27.2V: 28.8V es el máximo permitido, no lo ideal para que dure."]]},
+    notes: [
+      ["crit","El máximo de la batería es 3000W / 120A continuos. A 4000W el inversor le pediría ~160–170A, que solo aguanta 15 segundos (pico de 150A). Para cargas sostenidas no pases de ~2800–3000W."],
+      ["warn","Tiene RS485/CAN, pero sin el cable y protocolo compatibles el modo <b>Lib</b> da el error <b>61</b>. Se configura en <b>USE</b> y el SOC real lo lees en la pantalla de la batería."]],
+    reserve: {
+      title: "Reserva del 10% — Felicity FLA24171-EU",
+      min: 22.4, max: 28.8,
+      zones: [[22.4,24,"danger"],[24,25.2,"reserve"],[25.2,27,"normal"],[27,28.8,"full"]],
+      markers: [[22.4,"Mín. operativo"],[24,"Menú 29"],[25.2,"Menú 12"],[27,"Menú 13"],[28.4,"Menú 26"]],
+      legend: {danger:"Último 10%: nunca debería llegar aquí", reserve:"Reserva entre cambio a red y corte", normal:"Uso normal", full:"Carga / casi llena"},
+      head: ["SOC","Voltaje","V/celda en reposo"],
+      rows: [["100%","27.2V","3.40V"],["80%","26.6V","3.32V"],["60%","26.2V","3.27V"],["40%","26.0V","3.25V"],["20%","25.6V","3.20V"],["10%","24.0V","3.00V · corte recomendado por Felicity"],["0%","22.4V","2.80V · mínimo del rango de operación"]],
+      hl: "10%",
+      notes: [
+        ["warn","Tabla genérica de LiFePO4 de 8 celdas: Felicity no publica su curva SOC en el manual. Entre 20% y 80% la curva es casi plana y bajo carga el voltaje cae 0.3–1V; fíate más de la pantalla de la batería."],
+        ["ok","El menú 29 corta a 24.0V, el corte oficial de Felicity sin comunicación (≈10% en reposo); bajo carga cortará con algo más. Con red, el menú 12 (25.2V) pasa a la red antes de entrar en la reserva. Si la batería marca menos de 15% al cambiar, sube el menú 12 a 25.6V."]]
+    }
+  },
+  ep: {
+    batt: "Ogrphy 100Ah", battFull: "Ogrphy 51.2V 100Ah LiFePO4", source: "Specs del fabricante",
+    specs: [
+      ["Capacidad nominal","51.2V / 100Ah (16 celdas)"], ["Energía","5120Wh"],
+      ["Ciclos @0.5C","&gt;2000 a 100% / &gt;5000 a 80% DOD"], ["Voltaje de carga","56.8–58.4V"],
+      ["Carga recomendada","30A"], ["Carga máxima","150A"],
+      ["Descarga continua máxima","200A"], ["Pico","1000A 3–5s · 600A 30s · 300A 32s"],
+      ["Corte BMS en descarga","40V (2.5V/celda)"], ["Corte BMS en carga","58.4V (3.65V/celda)"],
+      ["Temperatura de carga","0 °C a 55 °C"], ["Temperatura de descarga","−20 °C a 60 °C"],
+      ["Autodescarga","&lt;3% al mes"], ["Protección · terminales","IP65 · M8"],
+      ["Módulos en serie","Máx. 1"], ["Comunicación","Solo Bluetooth (sin RS485)"]],
+    notes: [
+      ["ok","A 6500W la batería entrega ~150A, dentro de sus 200A continuos: aguanta el inversor completo."],
+      ["warn","Sin RS485 el inversor no ve el SOC real: tipo <b>USE</b>. No uses <b>LIb</b> ni <b>LIC</b>: esperan comunicación, dan el aviso <b>61</b> y a los 10 minutos el inversor deja de cargar y descargar."]],
+    cfgNote: ["info","Configura primero el <b>#05 en USE</b>: desbloquea los menús 26, 27 y 29. Para entrar mantén ↵ 3 segundos; ▲/▼ para moverte; ↵ confirma."],
+    reserve: {
+      title: "Reserva — Ogrphy 51.2V",
+      min: 40, max: 58.4,
+      zones: [[40,44,"crit"],[44,48,"danger"],[48,50,"reserve"],[50,54,"normal"],[54,58.4,"full"]],
+      markers: [[40,"BMS corta"],[48,"Menú 29"],[50,"Menú 12"],[54,"Menú 13"],[56.8,"Menú 26"]],
+      legend: {crit:"Zona del BMS (corte real 40V)", danger:"Nunca debería llegar aquí", reserve:"Reserva entre cambio a red y corte", normal:"Uso normal", full:"Carga / casi llena"},
+      head: ["SOC","Voltaje","V/celda en reposo"],
+      rows: [["100%","54.4V","3.40V"],["80%","53.1V","3.32V"],["60%","52.3V","3.27V"],["40%","52.0V","3.25V"],["20%","51.2V","3.20V"],["10%","48.0V","3.00V"],["0%","40V","2.50V · corte BMS"]],
+      hl: "10%",
+      notes: [
+        ["warn","Tabla genérica de LiFePO4 de 16 celdas: Ogrphy no publica su curva SOC. Bajo carga el voltaje cae 0.5–1.5V; compara con el SOC del Bluetooth."],
+        ["ok","Con red, el menú 12 (50V) pasa las cargas a la red antes de tocar la reserva. Sin red, el menú 29 corta a 48.0V (≈10%), el máximo que permite este inversor, 8V por encima del corte del BMS. Si el Bluetooth marca menos de 10% al cambiar a red, sube el menú 12 a 51V."]]
+    }
+  }
+};
+
+const TAG = {crit:"Importante", warn:"Ojo", ok:"Lógica", info:"Primero"};
+const ZCOLOR = {crit:"var(--z-crit)", danger:"var(--z-danger)", reserve:"var(--z-reserve)", normal:"var(--z-normal)", full:"var(--z-full)"};
+
+let cur = "sumry", tab = "bateria", onlyChanges = false;
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+function invOf(k){ return k === "ep" ? "ep" : "sumry"; }
+function getState(){ try{ return JSON.parse(lsGet(SYSTEMS[cur].stateKey) || "{}") || {}; }catch(e){ return {}; } }
+function setState(s){ lsSet(SYSTEMS[cur].stateKey, JSON.stringify(s)); }
+function menu(n){ return SYSTEMS[cur].menus.find(function(m){ return m.num === n; }); }
+
+function callouts(list){
+  return (list || []).map(function(n){
+    return '<div class="callout ' + n[0] + '"><span class="tag">' + TAG[n[0]] + '</span><p>' + n[1] + '</p></div>';
+  }).join("");
+}
+function specSheet(specs){
+  return '<div class="specs">' + specs.map(function(s){
+    return '<div class="spec"><span class="k">' + s[0] + '</span><span class="v">' + s[1] + '</span></div>';
+  }).join("") + '</div>';
+}
+
+function renderHeader(){
+  const inv = invOf(cur);
+  document.getElementById("hTitle").textContent = INVERTERS[inv].name + " · " + INVERTERS[inv].out;
+  document.getElementById("hSub").textContent = "Batería " + DETAIL[cur].battFull;
+  document.getElementById("invSeg").innerHTML = Object.keys(INVERTERS).map(function(k){
+    const I = INVERTERS[k];
+    return '<button data-inv="' + k + '" aria-pressed="' + (k === inv) + '"><b>' + I.name + '</b><span>' + I.tag + '</span></button>';
+  }).join("");
+  const bats = INVERTERS[inv].batteries;
+  let h = '<span>Batería:</span>';
+  if(bats.length > 1){
+    h += bats.map(function(b){ return '<button class="chip" data-batt="' + b + '" aria-pressed="' + (b === cur) + '">' + DETAIL[b].batt + '</button>'; }).join("");
+  } else {
+    h += '<span class="single">' + DETAIL[bats[0]].batt + '</span>';
+  }
+  document.getElementById("battRow").innerHTML = h;
+  document.getElementById("scopeCur").textContent = INVERTERS[inv].name.split(" ")[0] + " + " + DETAIL[cur].batt;
+}
+
+function renderSetpoints(){
+  const items = [["29","Corte por bajo voltaje"],["12","Cambio a la red"],["13","Vuelta a batería"],["26","Voltaje de carga"]];
+  let h = '<div class="setpoints-head"><h2>Puntos de ajuste</h2><span>' + DETAIL[cur].batt + ' · modo USE</span></div><div class="sp-grid">';
+  items.forEach(function(it){
+    const m = menu(it[0]);
+    h += '<div class="sp"><div class="v">' + (m ? m.rec : "—") + '</div><div class="l"><span class="m">Menú ' + it[0] + '</span><br>' + it[1] + '</div></div>';
+  });
+  document.getElementById("setpoints").innerHTML = h + '</div>';
+}
+
+function renderBattery(){
+  const D = DETAIL[cur];
+  let h = '<div class="block"><h2>' + D.battFull + '</h2><p class="lead">' + D.source + '</p>';
+  h += '<div class="sheet">' + specSheet(D.specs) + '</div>';
+  if(D.extra){
+    h += '<div class="sheet sub-sheet"><h3>' + D.extra.title + '</h3>' + specSheet(D.extra.specs) + '</div>' + callouts(D.extra.notes);
+  }
+  h += callouts(D.notes) + '</div>';
+  document.getElementById("bateria").innerHTML = h;
+}
+
+function renderInverter(){
+  const I = INVERTERS[invOf(cur)];
+  let h = "";
+  I.sheets.forEach(function(s){
+    h += '<div class="block"><h2>' + s.title + '</h2><div class="sheet">' + specSheet(s.specs) + '</div>' + callouts(s.notes) + '</div>';
+  });
+  h += '<div class="block"><h2>Calculadora de paneles</h2><p class="lead">Cuántos paneles en serie y en paralelo admite este inversor.</p><div class="form">' +
+    '<div class="fields2"><div class="field"><label for="voc">Voc del panel (V)</label><input type="number" id="voc" inputmode="decimal" placeholder="41.5"></div>' +
+    '<div class="field"><label for="isc">Isc del panel (A)</label><input type="number" id="isc" inputmode="decimal" placeholder="13.2"></div></div>' +
+    '<div class="field"><label for="pow">Potencia del panel (W), opcional: chequea el límite de ' + SYSTEMS[cur].mppt.maxW + 'W</label><input type="number" id="pow" inputmode="decimal" placeholder="550"></div>' +
+    '<div class="field"><label for="margin">Margen de seguridad</label><select id="margin">' +
+    '<option value="0.20">20% · más conservador (frío, envejecimiento, picos)</option><option value="0.15" selected>15% · recomendado</option><option value="0.10">10% · mínimo aceptable</option></select></div>' +
+    '<div id="calcOut"></div></div></div>';
+  document.getElementById("inversor").innerHTML = h;
+  calcPanels();
+}
+
+function renderMenus(){
+  const D = DETAIL[cur];
+  document.getElementById("cfgNote").innerHTML = D.cfgNote ? callouts([D.cfgNote]) : "";
+  document.getElementById("onlyChanges").checked = onlyChanges;
+  const st = getState();
+  const list = SYSTEMS[cur].menus.filter(function(m){ return !onlyChanges || m.defCode !== m.rec || m.first; });
+  let h = "";
+  list.forEach(function(m){
+    const done = !!st[m.num];
+    const changed = m.defCode !== m.rec;
+    let pills = changed ? '<span class="pill change">Cambiar</span>' : '<span class="pill">Igual</span>';
+    if(m.first) pills = '<span class="pill first">Configurar primero</span>' + pills;
+    if(!m.confirmed) pills += '<span class="pill verify">Verificar en pantalla</span>';
+    h += '<div class="menu' + (done ? ' done' : '') + (m.first ? ' first' : '') + '">' +
+      '<div class="check" role="checkbox" tabindex="0" data-id="' + m.num + '" aria-checked="' + done + '" aria-label="Menú ' + m.num + ' configurado">' + (done ? '✓' : '') + '</div>' +
+      '<div class="num">' + m.num + '</div>' +
+      '<div><div class="menu-title">' + m.name + pills + '</div>' +
+      '<div class="vals"><div class="val">De fábrica<b>' + m.defCode + '</b>' + m.defMeaning + '</div><span class="arrow">›</span>' +
+      '<div class="val rec">Recomendado<b>' + m.rec + '</b>' + m.recMeaning + '</div></div>' +
+      '<p class="why">' + m.why + '</p></div></div>';
+  });
+  document.getElementById("menuList").innerHTML = h || '<div class="empty">No hay menús que cambiar.</div>';
+  updateProgress();
+}
+
+function updateProgress(){
+  const st = getState(), menus = SYSTEMS[cur].menus;
+  const done = menus.filter(function(m){ return st[m.num]; }).length;
+  document.getElementById("progFill").style.width = (done / menus.length * 100) + "%";
+  const toChange = menus.filter(function(m){ return m.defCode !== m.rec; }).length;
+  document.getElementById("progText").textContent = done + " de " + menus.length + " menús revisados · " + toChange + " hay que cambiarlos";
+}
+
+function renderReserve(){
+  const R = DETAIL[cur].reserve, span = R.max - R.min;
+  const pct = function(v){ return (v - R.min) / span * 100; };
+  let bar = "";
+  R.zones.forEach(function(z){
+    const w = pct(z[1]) - pct(z[0]);
+    const label = z[0] + "–" + z[1] + "V";
+    bar += '<div class="zone ' + z[2] + '" style="width:' + w.toFixed(3) + '%" title="' + label + '">' + (w >= 14 ? label : "") + '</div>';
+  });
+  let mk = "";
+  R.markers.forEach(function(m, i){
+    const p = pct(m[0]);
+    let cls = "mk " + (i % 2 ? "dn" : "up");
+    if(p < 8) cls += " l"; else if(p > 92) cls += " r";
+    mk += '<div class="' + cls + '" style="left:' + p.toFixed(3) + '%"><b>' + m[0].toFixed(1) + 'V</b>' + m[1] + '</div>';
+  });
+  let lg = "";
+  Object.keys(R.legend).forEach(function(k){ lg += '<span><i style="background:' + ZCOLOR[k] + '"></i>' + R.legend[k] + '</span>'; });
+  let tb = '<tr>' + R.head.map(function(x){ return '<th>' + x + '</th>'; }).join("") + '</tr>';
+  R.rows.forEach(function(r){ tb += '<tr' + (r[0] === R.hl ? ' class="hl"' : '') + '>' + r.map(function(c){ return '<td>' + c + '</td>'; }).join("") + '</tr>'; });
+  document.getElementById("reserva").innerHTML =
+    '<div class="block"><h2>' + R.title + '</h2><p class="lead">Dónde corta el inversor, dónde pasa a la red y dónde protege el BMS.</p>' +
+    '<div class="gauge-card"><div class="gauge"><div class="bar">' + bar + '</div>' + mk + '</div><div class="legend">' + lg + '</div></div>' +
+    '<div class="tablewrap"><table class="soc">' + tb + '</table></div>' + callouts(R.notes) + '</div>';
+}
+
+function calcPanels(){
+  const out = document.getElementById("calcOut");
+  if(!out) return;
+  const voc = parseFloat(document.getElementById("voc").value);
+  const isc = parseFloat(document.getElementById("isc").value);
+  const pow = parseFloat(document.getElementById("pow").value);
+  const margin = parseFloat(document.getElementById("margin").value);
+  const M = SYSTEMS[cur].mppt;
+  if(!voc || voc <= 0 || !isc || isc <= 0){
+    out.innerHTML = callouts([["info","Escribe el Voc y el Isc del panel para ver la configuración."]]).replace('>Primero<','>Dato<');
+    return;
+  }
+  const maxSeries = Math.floor(M.maxV * (1 - margin) / voc);
+  const minSeries = Math.max(1, Math.ceil(M.minV * (1 + margin) / voc));
+  const maxParallel = Math.max(1, Math.floor(M.maxA * (1 - margin) / isc));
+  if(maxSeries < 1){ out.innerHTML = callouts([["warn","Con " + voc + "V de Voc ni un panel solo entra con este margen. Revisa el dato o usa un margen menor."]]); return; }
+  if(minSeries > maxSeries){ out.innerHTML = callouts([["warn","Con este Voc ninguna cantidad en serie cumple a la vez el voltaje de arranque y el máximo seguro."]]); return; }
+  const per = M.inputs > 1 ? " (por entrada)" : "";
+  const total = maxSeries * maxParallel * M.inputs;
+  let h = '<div class="results">' +
+    '<div class="res big"><span class="k">Paneles en serie' + per + '</span><span class="v">' + minSeries + '–' + maxSeries + '</span></div>' +
+    '<div class="res"><span class="k">Voltaje resultante</span><span class="v">' + (minSeries * voc).toFixed(1) + '–' + (maxSeries * voc).toFixed(1) + 'V</span></div>' +
+    '<div class="res big"><span class="k">Strings en paralelo' + per + '</span><span class="v">hasta ' + maxParallel + '</span></div>' +
+    '<div class="res"><span class="k">Corriente resultante' + per + '</span><span class="v">' + (isc * maxParallel).toFixed(1) + 'A</span></div>' +
+    '<div class="res"><span class="k">Total de paneles (máximo' + (M.inputs > 1 ? ', 2 entradas' : '') + ')</span><span class="v">' + total + '</span></div>';
+  let notes = [];
+  if(pow && pow > 0){
+    const byPow = Math.floor(M.maxW * (1 - margin) / pow);
+    h += '<div class="res"><span class="k">Límite por potencia (' + M.maxW + 'W con margen)</span><span class="v">' + byPow + ' paneles</span></div>' +
+      '<div class="res"><span class="k">Potencia total estimada</span><span class="v">' + (Math.min(total, byPow) * pow) + 'W</span></div>';
+    if(total > byPow) notes.push(["warn","El límite real lo pone la potencia (" + byPow + " paneles), no el voltaje ni la corriente."]);
+  }
+  h += '</div>';
+  notes.push(["ok","Margen aplicado: " + Math.round(margin * 100) + "%. Cubre el Voc más alto con frío, el envejecimiento y los picos de irradiancia. Con madrugadas frías usa el extremo bajo del rango en serie."]);
+  if(M.inputs > 1) notes.push(["ok","Cada entrada es un MPPT independiente (máx. 18A). Puedes usar una o las dos, con strings distintos."]);
+  out.innerHTML = h + callouts(notes);
+}
+
+function renderTabs(){
+  document.querySelectorAll("#tabs button").forEach(function(b){ b.setAttribute("aria-selected", b.dataset.tab === tab); });
+  ["bateria","inversor","config","reserva","exportar"].forEach(function(id){ document.getElementById(id).hidden = id !== tab; });
+  document.getElementById("setpoints").hidden = !(tab === "bateria" || tab === "config");
+}
+
+function setSystem(k){
+  cur = k; lsSet("solar_active_sys", k);
+  document.getElementById("exportText").value = "";
+  renderHeader(); renderSetpoints(); renderBattery(); renderInverter(); renderMenus(); renderReserve(); renderTabs();
+}
+
+/* ---------- Exportar ---------- */
+function exportList(){
+  const all = document.querySelector('#scopeSeg button[data-scope="all"]').getAttribute("aria-pressed") === "true";
+  return all ? Object.keys(SYSTEMS) : [cur];
+}
+function sysText(k){
+  const S = SYSTEMS[k];
+  let t = "CONFIGURACIÓN — " + S.reportTitle + "\n\nBATERÍA — DATOS CLAVE\n";
+  S.batteryFacts.forEach(function(f){ t += "- " + f[0] + ": " + f[1] + "\n"; });
+  t += "\nMPPT DEL INVERSOR\n";
+  S.mpptFacts.forEach(function(f){ t += "- " + f[0] + ": " + f[1] + "\n"; });
+  t += "\nMENÚS DEL INVERSOR (de fábrica -> recomendado)\n";
+  S.menus.forEach(function(m){ t += "#" + m.num + " " + m.name + ": " + m.defCode + " -> " + m.rec + (m.confirmed ? "" : "  [verificar en pantalla]") + "\n"; });
+  return t + "\nNOTA: " + S.footer + "\n";
+}
+function buildText(){
+  return "Generado: " + new Date().toLocaleDateString() + "\n\n" + exportList().map(sysText).join("\n==============================\n\n");
+}
+function sysPrint(k, first){
+  const S = SYSTEMS[k];
+  let h = '<h1' + (first ? '' : ' class="pb"') + '>' + S.name + '</h1><div class="small">Generado el ' + new Date().toLocaleDateString() + '</div>';
+  h += '<h2>Batería — datos clave</h2><table>' + S.batteryFacts.map(function(f){ return '<tr><td>' + f[0] + '</td><td>' + f[1] + '</td></tr>'; }).join("") + '</table>';
+  h += '<h2>MPPT del inversor</h2><table>' + S.mpptFacts.map(function(f){ return '<tr><td>' + f[0] + '</td><td>' + f[1] + '</td></tr>'; }).join("") + '</table>';
+  h += '<h2>Menús del inversor</h2><table><tr><th>#</th><th>Función</th><th>De fábrica</th><th>Recomendado</th></tr>' +
+    S.menus.map(function(m){ return '<tr><td>' + m.num + '</td><td>' + m.name + '</td><td>' + m.defCode + '</td><td>' + m.rec + (m.confirmed ? '' : ' *') + '</td></tr>'; }).join("") + '</table>';
+  return h + '<p class="small">* Código no confirmado literalmente en el manual: verificar en pantalla. ' + S.footer + '</p>';
+}
+
+/* ---------- Tema ---------- */
+function isDark(){
+  const t = document.documentElement.getAttribute("data-theme");
+  if(t) return t === "dark";
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("jsWarn").hidden = true;
+
+  document.getElementById("themeBtn").addEventListener("click", function(){
+    const next = isDark() ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    lsSet("sumry_theme", next);
+  });
+
+  document.getElementById("invSeg").addEventListener("click", function(e){
+    const b = e.target.closest("button[data-inv]"); if(!b) return;
+    const inv = b.dataset.inv;
+    if(invOf(cur) === inv) return;
+    const last = lsGet("solar_batt_" + inv);
+    setSystem(INVERTERS[inv].batteries.indexOf(last) >= 0 ? last : INVERTERS[inv].batteries[0]);
+  });
+  document.getElementById("battRow").addEventListener("click", function(e){
+    const b = e.target.closest("button[data-batt]"); if(!b) return;
+    lsSet("solar_batt_" + invOf(b.dataset.batt), b.dataset.batt);
+    setSystem(b.dataset.batt);
+  });
+  document.getElementById("tabs").addEventListener("click", function(e){
+    const b = e.target.closest("button[data-tab]"); if(!b) return;
+    tab = b.dataset.tab; lsSet("solar_tab", tab); renderTabs(); window.scrollTo(0, 0);
+  });
+
+  function toggleCheck(chk){
+    const id = chk.dataset.id, st = getState();
+    st[id] = !st[id]; setState(st);
+    chk.setAttribute("aria-checked", !!st[id]); chk.textContent = st[id] ? "✓" : "";
+    chk.closest(".menu").classList.toggle("done", !!st[id]);
+    updateProgress();
+  }
+  const ml = document.getElementById("menuList");
+  ml.addEventListener("click", function(e){ const c = e.target.closest(".check"); if(c) toggleCheck(c); });
+  ml.addEventListener("keydown", function(e){ const c = e.target.closest(".check"); if(c && (e.key === " " || e.key === "Enter")){ e.preventDefault(); toggleCheck(c); } });
+  document.getElementById("onlyChanges").addEventListener("change", function(){ onlyChanges = this.checked; renderMenus(); });
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    if(confirm("¿Borrar el progreso del checklist de esta batería?")){ lsDel(SYSTEMS[cur].stateKey); renderMenus(); }
+  });
+
+  const inv = document.getElementById("inversor");
+  inv.addEventListener("input", calcPanels); inv.addEventListener("change", calcPanels);
+
+  document.getElementById("scopeSeg").addEventListener("click", function(e){
+    const b = e.target.closest("button[data-scope]"); if(!b) return;
+    this.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x === b); });
+    document.getElementById("exportText").value = "";
+  });
+  document.getElementById("genBtn").addEventListener("click", function(){ document.getElementById("exportText").value = buildText(); });
+  document.getElementById("copyBtn").addEventListener("click", function(){
+    const ta = document.getElementById("exportText");
+    if(!ta.value) ta.value = buildText();
+    const msg = document.getElementById("copied");
+    function done(){ msg.textContent = "Copiado al portapapeles"; setTimeout(function(){ msg.textContent = ""; }, 2000); }
+    function fallback(){ ta.removeAttribute("readonly"); ta.select(); try{ document.execCommand("copy"); }catch(e){} ta.setAttribute("readonly", "readonly"); done(); }
+    try{ navigator.clipboard.writeText(ta.value).then(done).catch(fallback); }catch(e){ fallback(); }
+  });
+  document.getElementById("printBtn").addEventListener("click", function(){
+    document.getElementById("printArea").innerHTML = exportList().map(function(k, i){ return sysPrint(k, i === 0); }).join("");
+    document.body.classList.add("printing");
+    window.print();
+  });
+  window.onafterprint = function(){ document.body.classList.remove("printing"); };
+
+  let deferredPrompt = null;
+  const installBtn = document.getElementById("installBtn");
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferredPrompt = e; installBtn.hidden = false; });
+  installBtn.addEventListener("click", function(){
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; installBtn.hidden = true; });
+  });
+  window.addEventListener("appinstalled", function(){ installBtn.hidden = true; });
+  if("serviceWorker" in navigator && location.protocol !== "file:"){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+
+  const savedTab = lsGet("solar_tab");
+  if(["bateria","inversor","config","reserva","exportar"].indexOf(savedTab) >= 0) tab = savedTab;
+  const saved = lsGet("solar_active_sys");
+  setSystem(SYSTEMS[saved] ? saved : "sumry");
+});
+</script>
+</body>
+</html>

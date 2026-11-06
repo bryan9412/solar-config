@@ -1,0 +1,19 @@
+CONFIGURACIÓN SOLAR — cómo instalarla como app
+
+Chrome NO deja instalar apps abiertas desde un archivo local (file://).
+Necesita que la carpeta esté publicada en una dirección https://.
+
+OPCIÓN FÁCIL — Netlify Drop (gratis, sin cuenta para probar)
+1. En la PC, entra a https://app.netlify.com/drop
+2. Arrastra la carpeta "solar" completa.
+3. Te da un enlace https://algo.netlify.app  (crea cuenta gratis para que no caduque).
+4. Ábrelo en Chrome del celular -> botón "Instalar app" arriba,
+   o menú ⋮ -> "Instalar app" / "Agregar a pantalla principal".
+
+OPCIÓN GITHUB PAGES
+1. Crea un repositorio y sube el CONTENIDO de la carpeta "solar".
+2. Settings -> Pages -> Branch: main / root -> Save.
+3. Abre https://TU-USUARIO.github.io/NOMBRE-REPO/ en Chrome del celular e instala.
+
+Una vez instalada, abre sin internet. Si cambias algo y lo vuelves a subir,
+cambia VERSION en sw.js (solar-v1 -> solar-v2) para que el celular lo actualice.
