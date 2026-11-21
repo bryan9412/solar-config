@@ -73,6 +73,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, [role="checkbox
 .brand-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
 .install-btn{border:0; border-radius:10px; padding:0 12px; height:38px; background:var(--accent); color:var(--accent-ink); font-family:var(--f-tech); font-weight:700; font-size:.9rem; cursor:pointer;}
 .install-btn[hidden]{display:none;}
+.upd-btn.busy{opacity:.5; pointer-events:none;}
+.updmsg{margin:8px 0 0; font-size:.85rem; color:var(--muted);}
+.updmsg:empty{display:none;}
+.ghost.sure{border-style:solid; border-color:var(--z-danger); color:var(--z-danger); font-weight:700;}
 .icon-btn{flex-shrink:0; width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); cursor:pointer; font-size:1rem;}
 .selectors{display:grid; gap:8px; padding-bottom:10px;}
 .seg{display:grid; grid-template-columns:repeat(auto-fit, minmax(0,1fr)); background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:3px; gap:3px;}
@@ -230,6 +234,7 @@ textarea{width:100%; min-height:260px; margin-top:10px; background:var(--surface
       </div>
       <div class="brand-actions">
         <button class="install-btn" id="installBtn" hidden>Instalar app</button>
+        <button class="icon-btn upd-btn" id="updBtn" aria-label="Actualizar la app" title="Actualizar la app">↻</button>
         <button class="icon-btn" id="themeBtn" aria-label="Cambiar entre tema claro y oscuro">◐</button>
       </div>
     </div>
@@ -250,6 +255,7 @@ textarea{width:100%; min-height:260px; margin-top:10px; background:var(--surface
 <main class="wrap">
   <div class="warnbox" id="jsWarn">El JavaScript de esta página no se ejecutó. Casi siempre es porque el archivo se copió incompleto: debe terminar en &lt;/html&gt;.</div>
 
+  <p class="updmsg" id="updMsg" aria-live="polite"></p>
   <div class="setpoints" id="setpoints"></div>
 
   <section id="bateria" role="tabpanel"></section>
@@ -281,7 +287,7 @@ textarea{width:100%; min-height:260px; margin-top:10px; background:var(--surface
       <div class="form">
         <div class="seg" id="scopeSeg" role="group" aria-label="Alcance del reporte">
           <button data-scope="current" aria-pressed="true"><b>Esta combinación</b><span id="scopeCur"></span></button>
-          <button data-scope="all" aria-pressed="false"><b>Todo</b><span>Las 3 baterías</span></button>
+          <button data-scope="all" aria-pressed="false"><b>Todo</b><span id="scopeAll">Todas las baterías</span></button>
         </div>
         <button class="btn" id="genBtn">Generar reporte</button>
         <textarea id="exportText" readonly placeholder="Toca Generar reporte para ver el texto aquí."></textarea>
@@ -456,6 +462,42 @@ const SYSTEMS = {
   }
 };
 
+/* Batería BR-100 / BR-200 / BR-300 (manual LiFePO4 Household Energy Storage Battery v1.0 24.12) con el ExpertPower 48V.
+   Parte de los menús de la Ogrphy (misma lógica USE, mismo inversor) y cambia solo lo que depende de la batería. */
+const BR_MODELOS = {
+  br100: {id:"BR-100", ah:100, wh:"5120Wh", kg:"45 ±1 kg", carga:20,  cargaMax:"50A (5 s)",  desc:50,  descMax:100, pico:"105A (5 s)", pot:"2–4.5kW", ccMenu:"20A", dMenu:"100A", dMenuOk:false},
+  br200: {id:"BR-200", ah:200, wh:"10240Wh", kg:"85 ±1 kg", carga:40, cargaMax:"100A (5 s)", desc:100, descMax:200, pico:"205A (5 s)", pot:"5–8kW", ccMenu:"40A", dMenu:"150A", dMenuOk:true},
+  br300: {id:"BR-300", ah:300, wh:"15360Wh", kg:"110 ±1 kg", carga:40, cargaMax:"100A (5 s)", desc:100, descMax:200, pico:"205A (5 s)", pot:"5–8kW", ccMenu:"40A", dMenu:"150A", dMenuOk:true}
+};
+Object.keys(BR_MODELOS).forEach(function(k){
+  const M = BR_MODELOS[k], B = JSON.parse(JSON.stringify(SYSTEMS.ep));
+  B.sub = "Batería " + M.id + " 51.2V " + M.ah + "Ah LiFePO4 — sin RS485";
+  B.name = "ExpertPower IVV48V6.5KW + " + M.id + " 51.2V " + M.ah + "Ah";
+  B.reportTitle = "EXPERTPOWER IVV48V6.5KW (120V/60Hz) + BATERÍA " + M.id + " 51.2V " + M.ah + "Ah LiFePO4";
+  B.stateKey = k + "_config_state";
+  B.menus.forEach(function(m){
+    if(m.num === "02"){ m.rec = M.ccMenu; m.recMeaning = "Carga nominal"; m.why = "El manual da " + M.carga + "A como corriente de carga nominal (" + M.cargaMax + " solo de pico). Es la carga continua que recomienda el fabricante; pasos de 10A."; }
+    if(m.num === "11"){ m.rec = M.carga === 20 ? "20A" : "30A"; m.recMeaning = M.carga === 20 ? "Bajado a la carga nominal" : "Igual"; m.why = "No carga la red de la casa de más. Si el #02 queda por debajo del #11, el inversor usa el valor del #02."; }
+    if(m.num === "26"){ m.why = "El BMS corta la carga a 57.6V ±0.2V; con 56.8V (3.55V/celda) queda 0.8V de margen y la batería llega prácticamente al 100%."; }
+    if(m.num === "29"){ m.why = "≈10% en reposo (el manual da 90% de profundidad de descarga). El BMS corta a 44.8V, así que quedan ≈3V de margen. Con USE el corte es fijo sin importar la carga."; }
+    if(m.num === "41"){ m.rec = M.dMenu; m.recMeaning = M.dMenu; m.confirmed = M.dMenuOk; m.why = M.descMax === 100 ? "Máxima descarga de la batería: 100A (nominal " + M.desc + "A ≈ 2.4kW). A 6500W el inversor pediría más de 125A: este límite lo corta antes de que el BMS se dispare. Verifica que el menú acepte 100A." : "El inversor a 6500W pide ~130–150A y la batería aguanta " + M.descMax + "A (nominal " + M.desc + "A). No limita el inversor y añade una capa de protección."; }
+  });
+  B.batteryFacts = [
+    ["Capacidad nominal","51.2V / " + M.ah + "Ah / " + M.wh],
+    ["Corte bajo DC (menú 29)","48.0V — máximo que permite el inversor"],
+    ["Cambio a red (menú 12)","50V"],
+    ["Vuelta a batería (menú 13)","54V"],
+    ["Carga bulk (menú 26)","56.8V"],
+    ["Flotación (menú 27)","54.0V"],
+    ["Corte real del BMS (no tocar)","44.8V descarga / 57.6V carga"],
+    ["Comunicación BMS / RS485","No usada — modo USE"],
+    ["Carga nominal / máx.", M.carga + "A / " + M.cargaMax],
+    ["Descarga nominal / máx.", M.desc + "A / " + M.descMax + "A (pico " + M.pico + ")"]
+  ];
+  B.footer = "Tipo de batería configurado como USE (definido por usuario) porque la batería no se comunica con el inversor por RS485. Reserva: cambio a red a 50V y corte a 48.0V (máximo permitido por el inversor), ≈3V por encima del corte del BMS (44.8V).";
+  SYSTEMS[k] = B;
+});
+
 Object.keys(SYSTEMS).forEach(function(k){
   SYSTEMS[k].menus.sort(function(a,b){ return parseInt(a.num,10) - parseInt(b.num,10); });
 });
@@ -477,7 +519,7 @@ const INVERTERS = {
   },
   ep: {
     name: "ExpertPower 6.5KW", tag: "48V · 6500W", out: "120V / 60Hz",
-    batteries: ["ep"],
+    batteries: ["ep", "br100", "br200", "br300"],
     sheets: [
       {title: "Características generales", specs: [
         ["Potencia nominal","6500W"], ["Entrada de batería","48VDC"],
@@ -589,6 +631,43 @@ const DETAIL = {
   }
 };
 
+Object.keys(BR_MODELOS).forEach(function(k){
+  const M = BR_MODELOS[k], g = M.descMax === 100;
+  DETAIL[k] = {
+    batt: M.id + " " + M.ah + "Ah", battFull: M.id + " 51.2V " + M.ah + "Ah LiFePO4", source: "Manual del fabricante (LiFePO4 Household Energy Storage Battery, v1.0 24.12)",
+    specs: [
+      ["Capacidad nominal","51.2V / " + M.ah + "Ah (16 celdas)"], ["Energía", M.wh],
+      ["Peso", M.kg], ["Corte de carga (BMS)","57.6V ±0.2V"],
+      ["Corte de descarga (BMS)","44.8V ±0.2V"], ["Carga nominal", M.carga + "A"],
+      ["Carga máxima", M.cargaMax], ["Descarga nominal", M.desc + "A"],
+      ["Descarga máxima", M.descMax + "A"], ["Pico de descarga", M.pico],
+      ["Potencia con carga", M.pot], ["Profundidad de descarga","90%"],
+      ["Comunicación","RS485 / CAN (no usada)"], ["Temperatura de carga","0 °C a 50 °C"],
+      ["Temperatura de descarga","−10 °C a 50 °C"], ["Almacenamiento","−20 °C a 60 °C"],
+      ["Humedad","5–75% HR"], ["Ciclos","≥6000 a 25 °C"],
+      ["Vida de diseño","10+ años (25 °C)"], ["Certificados","CE / UN38.3 / MSDS"]],
+    notes: [
+      g ? ["crit","La descarga máxima es 100A (≈4.8kW a 48V) y el manual da 2–4.5kW de potencia. El inversor de 6500W pediría más de 125A a plena carga: con esta batería sola no pases de ~4500W, o pon otra en paralelo. El menú 41 queda en 100A como protección."] : ["ok","A 6500W el inversor pide ~130–150A, dentro de los " + M.descMax + "A máximos de la batería. Su rango de potencia según el manual es 5–8kW; en continuo, la descarga nominal es " + M.desc + "A (≈5kW)."],
+      ["warn","La corriente nominal de carga es " + M.carga + "A (" + M.cargaMax + " solo de pico): por eso el menú 02 queda en " + M.ccMenu + ". Si pones más paneles, el excedente se queda sin entrar a la batería."],
+      ["warn","El manual rotula al revés los cortes: pone «Discharging cut-off» 57.6V y «Charging cut-off» 44.8V. Por lógica (16 celdas × 3.6V = 57.6V y × 2.8V = 44.8V) el corte de carga es 57.6V y el de descarga 44.8V; así se usó aquí."],
+      ["warn","Tiene RS485/CAN, pero sin el cable y protocolo compatibles no hay comunicación: tipo <b>USE</b>. No uses <b>LIb</b> ni <b>LIC</b>: dan el aviso <b>61</b> y a los 10 minutos el inversor deja de cargar y descargar."]],
+    cfgNote: ["info","Configura primero el <b>#05 en USE</b>: desbloquea los menús 26, 27 y 29. Para entrar mantén ↵ 3 segundos; ▲/▼ para moverte; ↵ confirma."],
+    reserve: {
+      title: "Reserva — " + M.id + " 51.2V",
+      min: 44.8, max: 57.6,
+      zones: [[44.8,48,"danger"],[48,50,"reserve"],[50,54,"normal"],[54,57.6,"full"]],
+      markers: [[44.8,"BMS corta"],[48,"Menú 29"],[50,"Menú 12"],[54,"Menú 13"],[56.8,"Menú 26"]],
+      legend: {danger:"Nunca debería llegar aquí", reserve:"Reserva entre cambio a red y corte", normal:"Uso normal", full:"Carga / casi llena"},
+      head: ["SOC","Voltaje","V/celda en reposo"],
+      rows: [["100%","54.4V","3.40V"],["80%","53.1V","3.32V"],["60%","52.3V","3.27V"],["40%","52.0V","3.25V"],["20%","51.2V","3.20V"],["10%","48.0V","3.00V"],["0%","44.8V","2.80V · corte BMS"]],
+      hl: "10%",
+      notes: [
+        ["warn","Tabla genérica de LiFePO4 de 16 celdas: el manual no publica la curva SOC. Bajo carga el voltaje cae 0.5–1.5V; fíate más de la pantalla de la batería."],
+        ["ok","Con red, el menú 12 (50V) pasa las cargas a la red antes de tocar la reserva. Sin red, el menú 29 corta a 48.0V (≈10%, coincide con el 90% de profundidad de descarga del manual), ≈3V por encima del corte del BMS."]]
+    }
+  };
+});
+
 const TAG = {crit:"Importante", warn:"Ojo", ok:"Lógica", info:"Primero"};
 const ZCOLOR = {crit:"var(--z-crit)", danger:"var(--z-danger)", reserve:"var(--z-reserve)", normal:"var(--z-normal)", full:"var(--z-full)"};
 
@@ -597,7 +676,7 @@ let cur = "sumry", tab = "bateria", onlyChanges = false;
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
-function invOf(k){ return k === "ep" ? "ep" : "sumry"; }
+function invOf(k){ return INVERTERS.ep.batteries.indexOf(k) >= 0 ? "ep" : "sumry"; }
 function getState(){ try{ return JSON.parse(lsGet(SYSTEMS[cur].stateKey) || "{}") || {}; }catch(e){ return {}; } }
 function setState(s){ lsSet(SYSTEMS[cur].stateKey, JSON.stringify(s)); }
 function menu(n){ return SYSTEMS[cur].menus.find(function(m){ return m.num === n; }); }
@@ -851,8 +930,17 @@ document.addEventListener("DOMContentLoaded", function(){
   ml.addEventListener("click", function(e){ const c = e.target.closest(".check"); if(c) toggleCheck(c); });
   ml.addEventListener("keydown", function(e){ const c = e.target.closest(".check"); if(c && (e.key === " " || e.key === "Enter")){ e.preventDefault(); toggleCheck(c); } });
   document.getElementById("onlyChanges").addEventListener("change", function(){ onlyChanges = this.checked; renderMenus(); });
-  document.getElementById("resetBtn").addEventListener("click", function(){
-    if(confirm("¿Borrar el progreso del checklist de esta batería?")){ lsDel(SYSTEMS[cur].stateKey); renderMenus(); }
+  /* Sin confirm(): en la app Android (WebView) los diálogos del navegador no aparecen y el botón no hacía nada. Se confirma con un segundo toque. */
+  const resetBtn = document.getElementById("resetBtn"), resetTxt = resetBtn.textContent;
+  let resetTimer = null;
+  function resetOff(){ clearTimeout(resetTimer); resetBtn.classList.remove("sure"); resetBtn.textContent = resetTxt; }
+  resetBtn.addEventListener("click", function(){
+    if(resetBtn.classList.contains("sure")){
+      resetOff(); lsDel(SYSTEMS[cur].stateKey); renderMenus();
+      return;
+    }
+    resetBtn.classList.add("sure"); resetBtn.textContent = "Toca otra vez para borrar el progreso de esta batería";
+    resetTimer = setTimeout(resetOff, 4000);
   });
 
   const inv = document.getElementById("inversor");
@@ -879,6 +967,23 @@ document.addEventListener("DOMContentLoaded", function(){
   });
   window.onafterprint = function(){ document.body.classList.remove("printing"); };
 
+  const updBtn = document.getElementById("updBtn"), updMsg = document.getElementById("updMsg");
+  function aviso(t){ updMsg.textContent = t; }
+  updBtn.addEventListener("click", async function(){
+    if(location.protocol === "file:"){ aviso("Esta copia no se actualiza sola: abre la app con internet para recibir los cambios."); return; }
+    updBtn.classList.add("busy"); aviso("Buscando actualización…");
+    try{
+      const r = await fetch("index.html?u=" + Date.now(), {cache: "no-store"});
+      if(!r.ok) throw new Error("http");
+      if(window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(function(k){ return caches.delete(k); })); }
+      if(navigator.serviceWorker){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(function(x){ return x.unregister(); })); }
+      aviso("Actualizada. Recargando…");
+      setTimeout(function(){ location.reload(); }, 400);
+    }catch(e){
+      updBtn.classList.remove("busy"); aviso("No se pudo actualizar: sin internet. Tu progreso sigue guardado.");
+    }
+  });
+
   let deferredPrompt = null;
   const installBtn = document.getElementById("installBtn");
   window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferredPrompt = e; installBtn.hidden = false; });
@@ -892,6 +997,7 @@ document.addEventListener("DOMContentLoaded", function(){
     navigator.serviceWorker.register("sw.js").catch(function(){});
   }
 
+  document.getElementById("scopeAll").textContent = "Las " + Object.keys(SYSTEMS).length + " baterías";
   const savedTab = lsGet("solar_tab");
   if(["bateria","inversor","config","reserva","exportar"].indexOf(savedTab) >= 0) tab = savedTab;
   const saved = lsGet("solar_active_sys");
