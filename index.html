@@ -73,6 +73,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [role="checkbox
 .brand-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
 .install-btn{border:0; border-radius:10px; padding:0 12px; height:38px; background:var(--accent); color:var(--accent-ink); font-family:var(--f-tech); font-weight:700; font-size:.9rem; cursor:pointer;}
 .install-btn[hidden]{display:none;}
+.capline{flex-basis:100%; margin-top:2px; font-size:.8rem; color:var(--muted);}
 .upd-btn.busy{opacity:.5; pointer-events:none;}
 .updmsg{margin:8px 0 0; font-size:.85rem; color:var(--muted);}
 .updmsg:empty{display:none;}
@@ -471,9 +472,9 @@ const BR_MODELOS = {
 };
 Object.keys(BR_MODELOS).forEach(function(k){
   const M = BR_MODELOS[k], B = JSON.parse(JSON.stringify(SYSTEMS.ep));
-  B.sub = "Batería " + M.id + " 51.2V " + M.ah + "Ah LiFePO4 — sin RS485";
-  B.name = "ExpertPower IVV48V6.5KW + " + M.id + " 51.2V " + M.ah + "Ah";
-  B.reportTitle = "EXPERTPOWER IVV48V6.5KW (120V/60Hz) + BATERÍA " + M.id + " 51.2V " + M.ah + "Ah LiFePO4";
+  B.sub = "Batería Household " + M.id + " 51.2V " + M.ah + "Ah LiFePO4 — sin RS485";
+  B.name = "ExpertPower IVV48V6.5KW + Household " + M.id + " 51.2V " + M.ah + "Ah";
+  B.reportTitle = "EXPERTPOWER IVV48V6.5KW (120V/60Hz) + BATERÍA HOUSEHOLD " + M.id + " 51.2V " + M.ah + "Ah LiFePO4";
   B.stateKey = k + "_config_state";
   B.menus.forEach(function(m){
     if(m.num === "02"){ m.rec = M.ccMenu; m.recMeaning = "Carga nominal"; m.why = "El manual da " + M.carga + "A como corriente de carga nominal (" + M.cargaMax + " solo de pico). Es la carga continua que recomienda el fabricante; pasos de 10A."; }
@@ -601,7 +602,7 @@ const DETAIL = {
     }
   },
   ep: {
-    batt: "Ogrphy 100Ah", battFull: "Ogrphy 51.2V 100Ah LiFePO4", source: "Specs del fabricante",
+    fam: "Ogrphy", cap: "100Ah", batt: "Ogrphy 100Ah", battFull: "Ogrphy 51.2V 100Ah LiFePO4", source: "Specs del fabricante",
     specs: [
       ["Capacidad nominal","51.2V / 100Ah (16 celdas)"], ["Energía","5120Wh"],
       ["Ciclos @0.5C","&gt;2000 a 100% / &gt;5000 a 80% DOD"], ["Voltaje de carga","56.8–58.4V"],
@@ -634,7 +635,7 @@ const DETAIL = {
 Object.keys(BR_MODELOS).forEach(function(k){
   const M = BR_MODELOS[k], g = M.descMax === 100;
   DETAIL[k] = {
-    batt: M.id + " " + M.ah + "Ah", battFull: M.id + " 51.2V " + M.ah + "Ah LiFePO4", source: "Manual del fabricante (LiFePO4 Household Energy Storage Battery, v1.0 24.12)",
+    fam: "Household", cap: M.ah + "Ah", batt: "Household " + M.ah + "Ah", battFull: "Household " + M.id + " 51.2V " + M.ah + "Ah LiFePO4", source: "Manual del fabricante (LiFePO4 Household Energy Storage Battery, v1.0 24.12)",
     specs: [
       ["Capacidad nominal","51.2V / " + M.ah + "Ah (16 celdas)"], ["Energía", M.wh],
       ["Peso", M.kg], ["Corte de carga (BMS)","57.6V ±0.2V"],
@@ -653,7 +654,7 @@ Object.keys(BR_MODELOS).forEach(function(k){
       ["warn","Tiene RS485/CAN, pero sin el cable y protocolo compatibles no hay comunicación: tipo <b>USE</b>. No uses <b>LIb</b> ni <b>LIC</b>: dan el aviso <b>61</b> y a los 10 minutos el inversor deja de cargar y descargar."]],
     cfgNote: ["info","Configura primero el <b>#05 en USE</b>: desbloquea los menús 26, 27 y 29. Para entrar mantén ↵ 3 segundos; ▲/▼ para moverte; ↵ confirma."],
     reserve: {
-      title: "Reserva — " + M.id + " 51.2V",
+      title: "Reserva — Household " + M.id + " 51.2V",
       min: 44.8, max: 57.6,
       zones: [[44.8,48,"danger"],[48,50,"reserve"],[50,54,"normal"],[54,57.6,"full"]],
       markers: [[44.8,"BMS corta"],[48,"Menú 29"],[50,"Menú 12"],[54,"Menú 13"],[56.8,"Menú 26"]],
@@ -701,11 +702,18 @@ function renderHeader(){
     return '<button data-inv="' + k + '" aria-pressed="' + (k === inv) + '"><b>' + I.name + '</b><span>' + I.tag + '</span></button>';
   }).join("");
   const bats = INVERTERS[inv].batteries;
+  const famOf = function(b){ return DETAIL[b].fam || DETAIL[b].batt; };
+  const fams = [];
+  bats.forEach(function(b){ if(fams.indexOf(famOf(b)) < 0) fams.push(famOf(b)); });
+  const curFam = famOf(cur), members = bats.filter(function(b){ return famOf(b) === curFam; });
   let h = '<span>Batería:</span>';
-  if(bats.length > 1){
-    h += bats.map(function(b){ return '<button class="chip" data-batt="' + b + '" aria-pressed="' + (b === cur) + '">' + DETAIL[b].batt + '</button>'; }).join("");
+  if(fams.length > 1){
+    h += fams.map(function(f){ const first = bats.filter(function(b){ return famOf(b) === f; })[0]; return '<button class="chip" data-fam="' + f + '" data-batt="' + (famOf(cur) === f ? cur : first) + '" aria-pressed="' + (f === curFam) + '">' + f + '</button>'; }).join("");
   } else {
-    h += '<span class="single">' + DETAIL[bats[0]].batt + '</span>';
+    h += '<span class="single">' + curFam + '</span>';
+  }
+  if(members.length > 1){
+    h += '<span class="capline">Capacidad:</span>' + members.map(function(b){ return '<button class="chip" data-batt="' + b + '" aria-pressed="' + (b === cur) + '">' + DETAIL[b].cap + '</button>'; }).join("");
   }
   document.getElementById("battRow").innerHTML = h;
   document.getElementById("scopeCur").textContent = INVERTERS[inv].name.split(" ")[0] + " + " + DETAIL[cur].batt;
@@ -911,8 +919,15 @@ document.addEventListener("DOMContentLoaded", function(){
   });
   document.getElementById("battRow").addEventListener("click", function(e){
     const b = e.target.closest("button[data-batt]"); if(!b) return;
-    lsSet("solar_batt_" + invOf(b.dataset.batt), b.dataset.batt);
-    setSystem(b.dataset.batt);
+    let target = b.dataset.batt;
+    if(b.dataset.fam){
+      const mem = INVERTERS[invOf(target)].batteries.filter(function(x){ return (DETAIL[x].fam || DETAIL[x].batt) === b.dataset.fam; });
+      const last = lsGet("solar_fam_" + b.dataset.fam);
+      target = mem.indexOf(last) >= 0 ? last : mem[0];
+    }
+    lsSet("solar_batt_" + invOf(target), target);
+    lsSet("solar_fam_" + (DETAIL[target].fam || DETAIL[target].batt), target);
+    setSystem(target);
   });
   document.getElementById("tabs").addEventListener("click", function(e){
     const b = e.target.closest("button[data-tab]"); if(!b) return;
